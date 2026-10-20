@@ -274,6 +274,7 @@ body.scene-changing #menuShell,body.scene-changing #classSelect{overflow:hidden!
 #copyRoomCode{font-size:21px;font-weight:700;letter-spacing:.12em;min-width:96px}
 .playerSlot.disconnected{opacity:.5}
 #onlineStatus{position:fixed;z-index:130;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:10px 16px;background:#282828;border:2px solid #fff;color:#fff;font-size:16px;text-align:center;max-width:90vw;pointer-events:none}
+body.online-match #mobileFree,body.online-match #mobileReset{display:none!important}
 
 </style>
 <!-- Embedded fonts. Source: https://github.com/google/fonts
@@ -1228,7 +1229,7 @@ for(const name of ['pointercancel','lostpointercapture']){
  dashButton.addEventListener(name,e=>{if(e.pointerId===dashControl.pointerId)releaseDash()});
 }
 mobileFreeButton.addEventListener('click',toggleFree);
-mobileResetButton.addEventListener('click',()=>{if(!sequenceLocked&&!replay.active)reset(true)});
+mobileResetButton.addEventListener('click',()=>{if(!online.active&&!sequenceLocked&&!replay.active)reset(true)});
 function getInputVector(){
  let x=Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'));
  let y=Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'));
@@ -1811,7 +1812,7 @@ reset();updateMobileMode();placeJoystick();resizeGameViewport();captureHistory(t
 // Native WebSocket client; all assets remain embedded in this HTML.
 (() => {
  const el=id=>document.getElementById(id),ui=menuState.ui;
- const DEFAULT_SERVER=''; // Filled automatically when a public deployment is available.
+ const DEFAULT_SERVER='https://canchita-online.onrender.com';
  let ws=null,address='',mode='create',pending=null,connecting=false,manual=false,retry=0,retryTimer=0,joinedAt=0,lastSend=0;
  let frames=[],lastPacket=0,lastEvent=0,replayData=null,replaySounds=[],replaySoundIndex=0,skipReplay=false,lastPhase='',renderedSize=0;
  const actions=[];
@@ -1836,9 +1837,11 @@ reset();updateMobileMode();placeJoystick();resizeGameViewport();captureHistory(t
  };
  function forget(){try{sessionStorage.removeItem('canchita.connection');}catch{}}
  online.leave=()=>{
+  const wasMatch=online.active;
   manual=true;clearTimeout(retryTimer);if(ws?.readyState===1)online.send({type:'leave'});if(ws)ws.close();ws=null;pending=null;connecting=false;
   online.room=null;online.active=false;online.id=null;online.token=null;frames=[];predicted=null;actions.length=0;replayData=null;forget();endReplay();status('');
   document.body.classList.remove('online-match');el('connectRoom').disabled=false;
+  if(wasMatch){selectedClass=null;reset(true);}
  };
  function endReplay(){replay.active=false;replayBadge.style.display='none';document.body.classList.remove('replaying');sequenceLocked=false;fade.stage='idle';fadeCurtain.style.opacity='0';stopGameSounds();}
  function remember(){try{sessionStorage.setItem('canchita.connection',JSON.stringify({code:online.room.code,token:online.token,address}));}catch{}}
