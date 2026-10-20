@@ -1,0 +1,9 @@
+{
+  "name": "canchita-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Canchita: salas privadas y fútbol de 1v1 a 3v3",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server.cjs", "test": "node --test test/*.test.cjs" },
+  "dependencies": { "ws": "^8.18.3" }
+}

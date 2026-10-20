@@ -1,2 +1,42 @@
-# canchita-online
-Canchita: fútbol con clases, salas privadas de 1v1 a 3v3.
+# Canchita online
+
+Juego de fútbol con clases, con salas privadas por código de cuatro caracteres y contraseña. De 1v1 a 3v3, sin jugadores automáticos en las salas online.
+
+## Jugar
+
+Abrí la dirección del servidor desde PC o celular. En JUGAR → CREAR SALA elegí una contraseña. Compartí el código y la contraseña con tus amigos; ellos entran en UNIRSE A SALA. En la sala, el anfitrión elige 1v1, 2v2 o 3v3; cada jugador elige equipo y clase. El primer jugador conectado de cada equipo elige el conjunto. Todos deben marcar LISTO para que el anfitrión inicie.
+
+Se conservan los controles: WASD/flechas, mouse y clic sostenido, clic derecho para pase, Shift para sprint, Espacio para dash y E para habilidad; en móvil, joystick y botones existentes. Los tiros libres y el reinicio individual se mantienen en JUEGO ACTUAL, la práctica sin conexión. En una partida online se vuelve a la sala desde MENÚ → VOLVER A LA SALA (anfitrión).
+
+Los goles incluyen la repetición con borde rojo y cámara lenta 0,60× desde medio segundo antes del remate. Solo suenan los remates y los rebotes en paredes; los rebotes suaves tienen menor volumen. Tocar durante la repetición la omite en ese dispositivo; el siguiente saque espera a que termine el tiempo compartido de repetición.
+
+## Ejecutar el servidor
+
+Necesita Node.js 22 o posterior.
+
+```
+npm ci
+npm start
+```
+
+Abrí http://localhost:3000. Otros dispositivos de la misma red pueden entrar en http://IP-DE-TU-PC:3000 si el firewall lo permite. Para jugar por Internet, desplegá el mismo proyecto como servicio web Node en Render; `render.yaml` configura el plan gratuito. No necesita base de datos. El servidor sirve el HTML y las conexiones WebSocket desde la misma dirección. `PORT` lo define el alojamiento. `TRUST_PROXY=1` se utiliza detrás del proxy de Render; debe quedar en 0 fuera de ese entorno.
+
+La versión descargable del HTML contiene todos los audios y fuentes. Para el modo online usa el servidor publicado que lleva configurado; la práctica funciona sin conexión.
+
+## Comprobaciones
+
+```
+npm test
+```
+
+Pruebas de salas, contraseñas erróneas, cupos, permisos, movimiento entre clientes reales, reconexión, clases, rebotes y goles. La interfaz también se comprueba con dos clientes del juego y entradas de PC y móvil en el entorno de desarrollo.
+
+## Funcionamiento y límites
+
+El servidor calcula a 120 pasos por segundo y envía estados a 20 Hz; el cliente interpola y anticipa el movimiento propio. Las contraseñas se guardan únicamente como hash scrypt con sal aleatoria. La contraseña y el token de reconexión no se envían a otros jugadores. El token del propio jugador se conserva en la sesión de esa pestaña para recuperar la conexión, con 20 segundos de tolerancia. El partido se pausa mientras falta un jugador y vuelve a la sala si no regresa. La salida del anfitrión transfiere su rol a otro jugador conectado.
+
+Las salas son temporales y viven en la memoria de una sola instancia. Un reinicio del servicio las cierra. Render gratuito puede dormir por inactividad, demorar el primer acceso y reiniciar instancias: no es una garantía de disponibilidad. No se incluye escalado entre múltiples instancias, cuentas ni persistencia de partidos.
+
+## Créditos de recursos
+
+Fuentes Oxanium, Teko y Barlow Condensed: Google Fonts, SIL Open Font License; textos de licencia incluidos en el HTML. Audios de remate y rebote: recursos reutilizables CC0 de la versión anterior, conservados con sus créditos dentro del HTML. Biblioteca `ws`: MIT (licencia en su paquete). El código y el arte del juego conservan sus derechos; este repositorio no concede una licencia nueva sobre el juego.
