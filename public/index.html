@@ -1418,11 +1418,57 @@ function projectedShotY(x){
  return ball.y;
 }
 function updateKeeper(dt){
- dive=null;keeper.diveCooldown=0;
- const goalX=field.r-keeper.r-11,attacking=possession||Math.hypot(ball.vx,ball.vy)<130,closeness=clamp((ball.x-(field.r-510))/390,0,1),desiredX=clamp(goalX-(attacking?108*closeness:Math.min(45,55*closeness)),field.r-160,goalX),distX=Math.max(1,field.r-ball.x),angleMiddle=(Math.atan2(goal.top-ball.y,distX)+Math.atan2(goal.bottom-ball.y,distX))/2;
- const incoming=!possession&&Math.hypot(ball.vx,ball.vy)>160&&ball.vx>85&&ball.x<field.r+ball.r,targetY=clamp(incoming?projectedShotY(keeper.x):ball.y+Math.tan(angleMiddle)*(field.r-desiredX),goal.top-keeper.r*.5,goal.bottom+keeper.r*.5);
- const chase=(axis,target,velocity,maxSpeed)=>{const desired=clamp((target-keeper[axis])*5.5,-maxSpeed,maxSpeed);return velocity+clamp(desired-velocity,-1050*dt,1050*dt);};
- keeper.vx=chase('x',desiredX,keeper.vx,155);keeper.vy=chase('y',targetY,keeper.vy,incoming?235:170);keeper.x=clamp(keeper.x+keeper.vx*dt,field.r-165,goalX);keeper.y=clamp(keeper.y+keeper.vy*dt,goal.top-keeper.r-15,goal.bottom+keeper.r+15);
+  keeper.diveCooldown=Math.max(0,keeper.diveCooldown-dt);
+  const goalX=field.r-keeper.r-11;
+  const attacking=possession || Math.hypot(ball.vx,ball.vy)<130;
+  const closeness=clamp((ball.x-(field.r-510))/390,0,1);
+  // Come off the line when the opponent is close, but never charge halfway up the pitch.
+  let desiredX=goalX-(attacking?108*closeness:Math.min(45,55*closeness));
+  desiredX=clamp(desiredX,field.r-160,goalX);
+  const distX=Math.max(1,field.r-ball.x);
+  // Face the actual angle from the ball to both posts to close the shooting lane.
+  const angleMiddle=(Math.atan2(goal.top-ball.y,distX)+Math.atan2(goal.bottom-ball.y,distX))/2;
+  const facingY=ball.y+Math.tan(angleMiddle)*(field.r-desiredX);
+  let desiredY=clamp(facingY,goal.top+5,goal.bottom-5);
+  const speed=Math.hypot(ball.vx,ball.vy),incoming=!possession && speed>160 && ball.vx>85 && ball.x<field.r+ball.r;
+  let arrival=Infinity,predicted=desiredY;
+  if(incoming){
+    predicted=projectedShotY(keeper.x);
+    arrival=(keeper.x-ball.x)/Math.max(85,ball.vx);
+    // 120ms read delay stops impossibly instant saves.
+    if(!keeperHistory.length || clock-keeperHistory[0].time>=.12){
+      desiredY=clamp(predicted,goal.top-18,goal.bottom+18);
+    }
+    desiredX=clamp(keeper.x,field.r-155,goalX);
+  }
+  keeperHistory.push({time:clock,x:ball.x,y:ball.y});
+  while(keeperHistory.length>1&&keeperHistory[1].time<=clock-.12)keeperHistory.shift();
+  // Dive to the side only when a fast ball is close enough to be reachable.
+  const delta=predicted-keeper.y;
+  if(!dive && keeper.diveCooldown===0 && incoming && arrival>0 && arrival<.44 && Math.abs(delta)>24 && Math.abs(delta)<148 && ball.x>keeper.x-300 && predicted>goal.top-35 && predicted<goal.bottom+35){
+    const dir=Math.sign(delta);
+    dive={ux:-.23,uy:dir*.973,elapsed:0,duration:.37,side:dir};
+    keeper.diveCooldown=1.05;
+    keeper.vy=dir*385;keeper.vx=-95;
+  }
+  if(dive){
+    dive.elapsed+=dt;
+    const slowing=1-.38*clamp(dive.elapsed/dive.duration,0,1);
+    keeper.x+=keeper.vx*dt*slowing;
+    keeper.y+=keeper.vy*dt*slowing;
+    if(dive.elapsed>=dive.duration){dive=null;keeper.vx=0;keeper.vy=0}
+  }else{
+    const chase=(axis,target,v,maxSpeed)=>{
+      // Acceleration-limited footwork: the keeper cannot teleport to a shot.
+      const desired=clamp((target-keeper[axis])*5.5,-maxSpeed,maxSpeed);
+      return v+clamp(desired-v,-1050*dt,1050*dt);
+    };
+    keeper.vx=chase('x',desiredX,keeper.vx,155);
+    keeper.vy=chase('y',desiredY,keeper.vy,incoming?235:170);
+    keeper.x+=keeper.vx*dt;keeper.y+=keeper.vy*dt;
+  }
+  keeper.x=clamp(keeper.x,field.r-165,goalX);
+  keeper.y=clamp(keeper.y,goal.top-keeper.r-15,goal.bottom+keeper.r+15);
 }
 function tick(dt){clock+=dt;
 clearanceCooldown=Math.max(0,clearanceCooldown-dt);
