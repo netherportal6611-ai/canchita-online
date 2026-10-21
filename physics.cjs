@@ -22,7 +22,7 @@ function reset(room){
  const original=room.mode==='original',field=original?OriginalRules.field:module.exports.field,cx=(field.l+field.r)/2,cy=(field.t+field.b)/2;
  room.roundId=(room.roundId||0)+1;
  room.ball={x:cx,y:cy,r:9,vx:0,vy:0,spin:0,owner:null,lastKickTime:0,lastPasserId:null,lastPasserTeam:0,lastPasserClass:null,lastTouchId:null,assistId:null,curve:null};
- for(const team of [1,2]){const members=room.players.filter(p=>p.team===team);members.forEach((p,i)=>{const dir=attacksRight(room,team)?1:-1;p.x=cx-dir*235;p.y=cy+(i-(members.length-1)/2)*125;p.r=original?28.73:17;if((!original&&p.classId==='goalkeeper')||p.practiceKeeper)p.x=dir>0?field.l+55:field.r-55;Object.assign(p,{vx:0,vy:0,dx:dir,dy:0,mx:dir,my:0,stamina:1,regen:0,dash:0,dashGhost:0,stretch:false,charging:false,charge:0,cooldown:0,ability:0,wallArmed:0,wallBoost:0,firstTouch:0,exhausted:false,input:{x:0,y:0,ax:cx,ay:cy,sprint:false,charging:false},actions:[]});});}
+ for(const team of [1,2]){const members=room.players.filter(p=>p.team===team);members.forEach((p,i)=>{const dir=attacksRight(room,team)?1:-1;p.x=cx-dir*235;p.y=cy+(i-(members.length-1)/2)*125;p.r=original?22.1:17;if((!original&&p.classId==='goalkeeper')||p.practiceKeeper)p.x=dir>0?field.l+55:field.r-55;Object.assign(p,{vx:0,vy:0,dx:dir,dy:0,mx:dir,my:0,stamina:1,regen:0,dash:0,dashGhost:0,stretch:false,charging:false,charge:0,cooldown:0,ability:0,wallArmed:0,wallBoost:0,firstTouch:0,exhausted:false,input:{x:0,y:0,ax:cx,ay:cy,sprint:false,charging:false},actions:[]});});}
  room.kickoff=1;room.history=[];
 }
 function event(room,type,data={}){room.events.push({id:++room.eventId,t:room.clock,type,...data});if(room.events.length>48)room.events.shift();}
