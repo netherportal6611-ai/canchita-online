@@ -89,6 +89,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
    if(m.type==='leave'){remove(room,p);send(ws,{type:'left'});return;}
    if(m.type==='getReplay'){if(room.phase==='replay'&&room.replay)send(ws,{type:'replay',replay:room.replay,events:room.events});return;}
    if(m.type==='skipReplay'){if(room.phase==='replay'&&room.replay?.scorerId===p.id&&m.id===room.replay.id){physics.finishReplay(room);broadcast(room,{type:'state',state:physics.snapshot(room),paused:room.paused,events:room.events,replayElapsed:0});}return;}
+   if(m.type==='profile'){const name=typeof m.name==='string'?m.name.trim().slice(0,18):'';if(!name||!Number.isInteger(m.number)||m.number<1||m.number>99){error(ws,'Revisá tu nombre y número.');return;}p.name=name;p.number=m.number;publish(room);return;}
    if(m.type==='return'&&room.host===p.id){returnLobby(room,'El anfitrión volvió a la sala.');return;}
    if(m.type==='resumeHalf'&&room.phase==='halftime'){p.halftimeReady=true;if(!room.paused&&room.players.every(x=>x.connected&&x.halftimeReady))physics.resumeHalf(room);broadcast(room,{type:'state',state:physics.snapshot(room),paused:room.paused,events:room.events});return;}
    if(m.type==='rematch'&&room.phase==='finished'){
