@@ -46,3 +46,7 @@ Las salas son temporales y viven en la memoria de una sola instancia. Un reinici
 Fuentes Oxanium, Teko y Barlow Condensed: Google Fonts, SIL Open Font License; textos de licencia incluidos en el HTML. Audios de remate y rebote: recursos reutilizables CC0 de la versión anterior, conservados con sus créditos dentro del HTML. Biblioteca `ws`: MIT (licencia en su paquete). El código y el arte del juego conservan sus derechos; este repositorio no concede una licencia nueva sobre el juego.
 
 Las repeticiones son compartidas. Solo quien marcó puede pedir al servidor que salte la repetición para todos. Cada saque tiene un identificador para descartar posiciones anteriores y liberar los controles. El cliente integra el movimiento local por cuadro y reconcilia su historial con los estados recibidos; los paquetes de estado atrasados se descartan antes de saturar la conexión.
+
+## Modos
+
+Normal conserva la posesión, las clases y los controles existentes. Original usa una cancha de 1725 × 937,5 unidades (cada dimensión es 1,5 veces la normal), discos que se empujan por colisión y remates radiales por cercanía, sin posesión ni carga. Todos los jugadores tienen la misma física de movimiento. En PC se patea con Espacio, X, Control o click; en móvil con PATEAR. La práctica Original no agrega rivales automáticos. Las salas tienen un modo fijo y solo admiten jugadores del mismo modo. Referencia del modelo de física: https://github.com/haxball/haxball-issues/wiki/Stadium-(.hbs)-File .

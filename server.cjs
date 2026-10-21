@@ -16,7 +16,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
  const send=(ws,data)=>{if(ws?.readyState===WebSocket.OPEN){if(data.type==='state'&&ws.bufferedAmount>64*1024)return;if(ws.bufferedAmount>4*1024*1024){ws.close(1013,'Conexión lenta');return;}ws.send(JSON.stringify(data));}};
  const error=(ws,message)=>send(ws,{type:'error',message});
  const captain=(room,team)=>room.players.find(p=>p.team===team&&p.connected)?.id;
- function lobby(room){return {code:room.code,size:room.size,host:room.host,phase:room.phase,paused:room.paused,kits:room.kits,players:room.players.map(p=>({id:p.id,name:p.name,number:p.number,classId:p.classId,team:p.team,ready:p.ready,connected:p.connected,rematchReady:Boolean(p.rematchReady),captain:captain(room,p.team)===p.id})),canStart:canStart(room)};}
+ function lobby(room){return {code:room.code,mode:room.mode||'normal',size:room.size,host:room.host,phase:room.phase,paused:room.paused,kits:room.kits,players:room.players.map(p=>({id:p.id,name:p.name,number:p.number,classId:p.classId,team:p.team,ready:p.ready,connected:p.connected,rematchReady:Boolean(p.rematchReady),captain:captain(room,p.team)===p.id})),canStart:canStart(room)};}
  function canStart(room){return room.phase==='lobby'&&room.players.length===room.size*2&&[1,2].every(t=>room.players.filter(p=>p.team===t).length===room.size)&&room.players.every(p=>p.ready&&p.connected);}
  function broadcast(room,message){for(const p of room.players)send(p.ws,message);}
  const publish=room=>broadcast(room,{type:'lobby',room:lobby(room)});
@@ -66,17 +66,18 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
        // Recheck limits after asynchronous hashing; never reserve an orphan room.
        if(rooms.size>=maxRooms)throw Error('El servidor está lleno.');
        let code;do{code=Array.from({length:4},()=>alphabet[crypto.randomInt(alphabet.length)]).join('');}while(rooms.has(code));
-       room={code,size:m.size,players:[],host:null,salt,hash,kits:{1:kits.has(m.kit)?m.kit:'blue',2:'red'},phase:'lobby',paused:false,createdAt:Date.now()};rooms.set(code,room);
+       room={code,mode:m.mode==='original'?'original':'normal',size:m.size,players:[],host:null,salt,hash,kits:{1:kits.has(m.kit)?m.kit:'blue',2:'red'},phase:'lobby',paused:false,createdAt:Date.now()};rooms.set(code,room);
       }else{
        room=rooms.get(String(m.code||'').toUpperCase());if(!room)throw Error('Código o contraseña incorrectos.');
        const hash=await scrypt(password,room.salt,32);if(ws.readyState!==WebSocket.OPEN)return;
        if(!crypto.timingSafeEqual(hash,room.hash))throw Error('Código o contraseña incorrectos.');
        if(rooms.get(room.code)!==room)throw Error('La sala ya se cerró.');
+       if((room.mode||'normal')!==(m.mode==='original'?'original':'normal'))throw Error('Esa sala es del modo '+(room.mode==='original'?'Original':'Normal')+'. Volvé y elegí ese modo.');
        if(room.phase!=='lobby')throw Error('El partido ya empezó.');
        if(room.players.length>=room.size*2)throw Error('La sala está llena.');
       }
       const team=room.players.filter(x=>x.team===1).length<=room.players.filter(x=>x.team===2).length?1:2;
-      p=physics.player(crypto.randomUUID(),{name,number:m.number,classId:m.classId},team);p.token=crypto.randomBytes(32).toString('hex');room.players.push(p);if(!room.host)room.host=p.id;
+      p=physics.player(crypto.randomUUID(),{name,number:m.number,classId:room.mode==='original'?'midfield':m.classId},team);p.token=crypto.randomBytes(32).toString('hex');room.players.push(p);if(!room.host)room.host=p.id;
      }
      p.ws=ws;ws.player=p;ws.room=room;
      if(room.players.every(x=>x.connected))room.paused=false;
@@ -97,8 +98,8 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
    if(m.type==='input'){
     if(room.phase!=='playing'||room.paused)return;
     if(!['x','y','ax','ay','bend'].every(k=>Number.isFinite(m[k])))return;
-    p.input={x:Math.max(-1,Math.min(1,m.x)),y:Math.max(-1,Math.min(1,m.y)),ax:Math.max(-1000,Math.min(2400,m.ax)),ay:Math.max(-1000,Math.min(1700,m.ay)),bend:Math.max(-.6,Math.min(.6,m.bend)),sprint:m.sprint===true,charging:m.charging===true};p.inputAt=now;
-    if(Array.isArray(m.actions))for(const a of m.actions.slice(0,3))if(['shoot','pass','dash','ability'].includes(a)&&p.actions.length<6)p.actions.push(a);
+    p.input={x:Math.max(-1,Math.min(1,m.x)),y:Math.max(-1,Math.min(1,m.y)),ax:Math.max(-1000,Math.min(2400,m.ax)),ay:Math.max(-1000,Math.min(1700,m.ay)),bend:Math.max(-.6,Math.min(.6,m.bend)),sprint:m.sprint===true,charging:m.charging===true,kick:m.kick===true};p.inputAt=now;
+    if(Array.isArray(m.actions))for(const a of m.actions.slice(0,3))if(['shoot','pass','dash','ability','kick'].includes(a)&&p.actions.length<6)p.actions.push(a);
     return;
    }
    if(room.phase!=='lobby')return;
@@ -107,7 +108,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
     room.size=m.size;for(const x of room.players)x.ready=false;
    }else if(m.type==='team'&&[1,2].includes(m.team)){
     if(p.team===m.team)return;if(room.players.filter(x=>x.team===m.team).length>=room.size){error(ws,'Ese equipo está lleno.');return;}p.team=m.team;p.ready=false;
-   }else if(m.type==='class'&&physics.stats[m.classId]){p.classId=m.classId;p.ready=false;}
+   }else if(m.type==='class'&&room.mode!=='original'&&physics.stats[m.classId]){p.classId=m.classId;p.ready=false;}
    else if(m.type==='kit'&&captain(room,m.team)===p.id&&kits.has(m.kit)){room.kits[m.team]=m.kit;for(const x of room.players.filter(x=>x.team===m.team))x.ready=false;}
    else if(m.type==='ready'){p.ready=m.ready===true;}
    else if(m.type==='start'&&room.host===p.id){
