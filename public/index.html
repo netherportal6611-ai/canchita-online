@@ -339,13 +339,14 @@ body.menu-open #fullscreenButton:active{transform:scale(1.04)}
  body.touch-mode #dashButton.low-stamina{color:#aaa;border-color:#888}
 }
 
-/* Rounded controls and a lighter flat fill; the joystick remains circular. */
-:root{--ui-gray:#484848;--ui-gray-active:#585858;--ui-gray-selected:#686868}
-button,.menuTile,.menuBack,.menuWide,.smallButton,.menuClass,.modeButton,.classChoice,.kitArrow,#fullscreenButton,#gameMenuButton,#mobileActions button,#dashButton{border-radius:10px!important;background-color:#484848!important}
-button:hover:not(:disabled){background-color:#585858!important}
-button:active:not(:disabled),button[aria-pressed=true]{background-color:#686868!important}
-button:disabled{background-color:#404040!important}
-button.backArrow,button.kitArrow,button.backArrow:hover,button.kitArrow:hover{background-color:transparent!important}
+/* The whole match interface uses the lighter theme; normal menus keep their original style. */
+body.playing{--ui-gray:#484848;--ui-gray-active:#585858;--ui-gray-selected:#686868}
+body.playing .score,body.playing .hud,body.playing #message,body.playing #replayBadge,body.playing #onlineStatus{border-radius:10px!important;background-color:#484848}
+body.playing .meter .track,body.playing .meter .fill{border-radius:6px!important}
+body.playing #gameMenuButton,body.playing #mobileActions button,body.playing #dashButton{border-radius:10px!important;background-color:#484848!important}
+body.playing #gameMenuButton:hover,body.playing #mobileActions button:hover:not(:disabled),body.playing #dashButton:hover{background-color:#585858!important}
+body.playing #gameMenuButton:active,body.playing #mobileActions button:active:not(:disabled),body.playing #dashButton:active{background-color:#686868!important}
+body.playing #mobileActions button:disabled{background-color:#404040!important}
 #joystickBase,#joystickKnob{border-radius:50%!important}
 #joystickBase{background:#484848}#joystickKnob{background:#707070}
 body.touch-mode{--touch-action-size:clamp(64px,18dvh,92px);--touch-edge:max(12px,env(safe-area-inset-right));--touch-bottom:max(12px,env(safe-area-inset-bottom))}
