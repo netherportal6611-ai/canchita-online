@@ -33,7 +33,7 @@ function action(room,p,a){
  }
  if(a==='shoot'&&b.owner===p.id&&p.charging){const target=p.target||{x:p.input.ax,y:p.input.ay};release(room,p,(240+p.charge*850)*s.shot*(1-.15*Math.abs(p.input.bend||0)),dir,target,p.input.bend||0);}
 }
-function rounded(p){const out={};for(const key of ['id','name','number','classId','team','connected','x','y','r','vx','vy','dx','dy','stamina','dash','stretch','ability','wallArmed','wallBoost','firstTouch','charge','charging'])out[key]=typeof p[key]==='number'?Math.round(p[key]*1000)/1000:p[key];return out;}
+function rounded(p){const out={};for(const key of ['id','name','number','classId','team','connected','x','y','r','vx','vy','dx','dy','stamina','dash','stretch','ability','wallArmed','wallBoost','firstTouch','receiveAt','receiveFast','charge','charging'])out[key]=typeof p[key]==='number'?Math.round(p[key]*1000)/1000:p[key];return out;}
 function snapshot(room){const b=room.ball;return {t:room.clock,players:room.players.map(rounded),ball:{x:b.x,y:b.y,r:9,vx:b.vx,vy:b.vy,owner:b.owner,lastKickTime:b.lastKickTime},score:room.score,phase:room.phase,kickoff:room.kickoff};}
 function scoreGoal(room,team){
  room.score[team-1]++;room.phase='replay';room.history.push(snapshot(room));
