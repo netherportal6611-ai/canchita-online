@@ -407,6 +407,8 @@ body.original-mode.playing #mobileActions{display:flex;bottom:var(--touch-bottom
 @media(orientation:landscape) and (max-height:540px) and (max-width:1100px){#pagePlay .menuTiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(100%,640px);gap:8px}#pagePlay .menuTile,body.original-mode #pagePlay .menuTile{min-height:44px;padding:8px 12px;font-size:16px}.publicRoomToggle{font-size:16px;grid-column:1/-1}#roomPasswordField{grid-column:1/-1}.publicRoomsPage{gap:10px}.publicRoomsList{max-height:calc(100dvh - 150px);gap:8px}.publicRoomRow{padding:10px;gap:12px}.publicRoomRow strong{font-size:16px}.publicRoomRow span{font-size:13px}.publicRoomRow button{min-width:80px}.lobbyPage{grid-template-areas:'heading formats' 'teams classes' 'teams actions' 'teams feedback' 'teams return' 'teams back'}body.original-mode .lobbyPage{grid-template-areas:'heading formats' 'teams actions' 'teams feedback' 'teams return' 'teams back'}#lobbyOriginalSettings,body.original-mode #lobbyOriginalSettings{grid-area:back;align-self:center;margin-left:52px;width:calc(100% - 52px);min-height:38px;padding:5px;font-size:11px}.lobbyPage>#leaveRoom{justify-self:start}}
 @media(max-width:540px) and (orientation:portrait){.publicRoomRow{padding:12px;gap:12px}.publicRoomRow strong{font-size:16px}.publicRoomRow span{font-size:13px}.publicRoomRow button{min-width:70px;padding:8px;font-size:13px}.publicRoomsPage .menuTop{gap:10px}.publicRoomsPage h2{font-size:25px}}
 
+@media(orientation:landscape) and (max-height:540px) and (max-width:1100px){#roomAccessForm>#openOriginalSettings{grid-column:1/-1}.publicRoomsPage h2{font-size:24px}}
+
 </style>
 <!-- Embedded fonts. Source: https://github.com/google/fonts
 Oxanium:
@@ -727,7 +729,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <section id="pageModes" class="menuPage" aria-labelledby="modesTitle" hidden><div class="menuTop"><h2 id="modesTitle">JUGAR</h2></div><div class="menuTiles"><button class="menuTile" id="chooseNormal" type="button">NORMAL</button><button class="menuTile" id="chooseOriginal" type="button">ORIGINAL</button></div><button class="menuBack backArrow" type="button" data-page="Home" aria-label="Volver al menú principal"><svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 244 231 94Q250 80 250 104V185C388 192 485 279 511 403Q515 425 498 420C421 341 337 315 250 321V409Q250 431 231 416L7 268Q-7 256 7 244Z"/></svg></button></section>
   <section id="pagePlay" class="menuPage" aria-labelledby="playTitle" hidden>
     <div class="menuTop"><h2 id="playTitle">JUGAR</h2></div>
-    <div class="menuTiles"><button class="menuTile" id="createRoom" type="button">CREAR SALA</button><button class="menuTile" id="openPublicRooms" type="button">SALAS PÚBLICAS</button><button class="menuTile" id="joinRoom" type="button">UNIRSE A SALA</button><button class="menuTile" id="openPractice" type="button">JUEGO ACTUAL</button><button class="menuTile" id="openOriginalSettings" type="button">AJUSTES DEL PARTIDO</button></div>
+    <div class="menuTiles"><button class="menuTile" id="createRoom" type="button">CREAR SALA</button><button class="menuTile" id="openPublicRooms" type="button">SALAS PÚBLICAS</button><button class="menuTile" id="joinRoom" type="button">UNIRSE A SALA</button><button class="menuTile" id="openPractice" type="button">JUEGO ACTUAL</button></div>
     <button class="menuBack backArrow" type="button" data-page="Modes" aria-label="Volver a los modos"><svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 244 231 94Q250 80 250 104V185C388 192 485 279 511 403Q515 425 498 420C421 341 337 315 250 321V409Q250 431 231 416L7 268Q-7 256 7 244Z"/></svg></button>
   </section>
   <section id="pagePublicRooms" class="menuPage publicRoomsPage" aria-labelledby="publicRoomsTitle" hidden><div class="menuTop"><h2 id="publicRoomsTitle">SALAS PÚBLICAS</h2><button id="refreshPublicRooms" class="smallButton" type="button">ACTUALIZAR</button></div><div id="publicRoomsList" class="publicRoomsList"></div><p id="publicRoomsFeedback" class="onlineFeedback" role="status" aria-live="polite"></p><button id="publicRoomsBack" class="menuBack backArrow" type="button" aria-label="Volver a jugar"><svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 244 231 94Q250 80 250 104V185C388 192 485 279 511 403Q515 425 498 420C421 341 337 315 250 321V409Q250 431 231 416L7 268Q-7 256 7 244Z"/></svg></button></section>
@@ -738,6 +740,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <label id="publicRoomField" class="publicRoomToggle" hidden><span>SALA PÚBLICA</span><input id="publicRoom" type="checkbox"></label>
       <label id="roomPasswordField" class="menuField">CONTRASEÑA<input id="roomPassword" type="password" minlength="1" maxlength="64" autocomplete="off" required></label>
       <label id="serverField" class="menuField" hidden>SERVIDOR<input id="serverAddress" type="url" placeholder="https://canchita-online.onrender.com" autocomplete="url"></label>
+      <button id="openOriginalSettings" class="menuWide" type="button">PERSONALIZAR PARTIDO</button>
       <button id="connectRoom" class="menuWide" type="submit">CREAR</button>
       <p id="accessFeedback" class="onlineFeedback" role="status" aria-live="polite"></p>
     </form>
@@ -767,7 +770,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <button id="returnMatch" class="smallButton" type="button" hidden>VOLVER A LA SALA</button>
     <button id="leaveRoom" class="menuBack backArrow" type="button" aria-label="Volver a jugar"><svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 244 231 94Q250 80 250 104V185C388 192 485 279 511 403Q515 425 498 420C421 341 337 315 250 321V409Q250 431 231 416L7 268Q-7 256 7 244Z"/></svg></button>
   </section>
-  <section id="pageMatchSettings" class="menuPage matchSettingsPage" aria-labelledby="matchSettingsTitle" hidden><div class="menuTop"><h2 id="matchSettingsTitle">AJUSTES DEL PARTIDO</h2></div><div id="originalSettingRows" class="originalSettingRows"></div><button id="saveOriginalSettings" class="menuWide" type="button">GUARDAR</button><p id="originalSettingsFeedback" class="onlineFeedback" role="status" aria-live="polite"></p><button id="originalSettingsBack" class="menuBack backArrow" type="button" aria-label="Volver"><svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 244 231 94Q250 80 250 104V185C388 192 485 279 511 403Q515 425 498 420C421 341 337 315 250 321V409Q250 431 231 416L7 268Q-7 256 7 244Z"/></svg></button></section>
+  <section id="pageMatchSettings" class="menuPage matchSettingsPage" aria-labelledby="matchSettingsTitle" hidden><div class="menuTop"><h2 id="matchSettingsTitle">PERSONALIZAR PARTIDO</h2></div><div id="originalSettingRows" class="originalSettingRows"></div><button id="saveOriginalSettings" class="menuWide" type="button">GUARDAR</button><p id="originalSettingsFeedback" class="onlineFeedback" role="status" aria-live="polite"></p><button id="originalSettingsBack" class="menuBack backArrow" type="button" aria-label="Volver"><svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 244 231 94Q250 80 250 104V185C388 192 485 279 511 403Q515 425 498 420C421 341 337 315 250 321V409Q250 431 231 416L7 268Q-7 256 7 244Z"/></svg></button></section>
   <section id="pageResults" class="menuPage resultsPage" aria-labelledby="resultsTitle" hidden>
     <div class="menuTop"><h2 id="resultsTitle">RESULTADO FINAL</h2></div>
     <div class="resultScorePanel"><strong id="finalScore">0 — 0</strong><span id="finalWinner">EMPATE</span></div>
@@ -1407,57 +1410,11 @@ function projectedShotY(x){
  return ball.y;
 }
 function updateKeeper(dt){
-  keeper.diveCooldown=Math.max(0,keeper.diveCooldown-dt);
-  const goalX=field.r-keeper.r-11;
-  const attacking=possession || Math.hypot(ball.vx,ball.vy)<130;
-  const closeness=clamp((ball.x-(field.r-510))/390,0,1);
-  // Come off the line when the opponent is close, but never charge halfway up the pitch.
-  let desiredX=goalX-(attacking?108*closeness:Math.min(45,55*closeness));
-  desiredX=clamp(desiredX,field.r-160,goalX);
-  const distX=Math.max(1,field.r-ball.x);
-  // Face the actual angle from the ball to both posts to close the shooting lane.
-  const angleMiddle=(Math.atan2(goal.top-ball.y,distX)+Math.atan2(goal.bottom-ball.y,distX))/2;
-  const facingY=ball.y+Math.tan(angleMiddle)*(field.r-desiredX);
-  let desiredY=clamp(facingY,goal.top+5,goal.bottom-5);
-  const speed=Math.hypot(ball.vx,ball.vy),incoming=!possession && speed>160 && ball.vx>85 && ball.x<field.r+ball.r;
-  let arrival=Infinity,predicted=desiredY;
-  if(incoming){
-    predicted=projectedShotY(keeper.x);
-    arrival=(keeper.x-ball.x)/Math.max(85,ball.vx);
-    // 120ms read delay stops impossibly instant saves.
-    if(!keeperHistory.length || clock-keeperHistory[0].time>=.12){
-      desiredY=clamp(predicted,goal.top-18,goal.bottom+18);
-    }
-    desiredX=clamp(keeper.x,field.r-155,goalX);
-  }
-  keeperHistory.push({time:clock,x:ball.x,y:ball.y});
-  while(keeperHistory.length>1&&keeperHistory[1].time<=clock-.12)keeperHistory.shift();
-  // Dive to the side only when a fast ball is close enough to be reachable.
-  const delta=predicted-keeper.y;
-  if(!dive && keeper.diveCooldown===0 && incoming && arrival>0 && arrival<.44 && Math.abs(delta)>24 && Math.abs(delta)<148 && ball.x>keeper.x-300 && predicted>goal.top-35 && predicted<goal.bottom+35){
-    const dir=Math.sign(delta);
-    dive={ux:-.23,uy:dir*.973,elapsed:0,duration:.37,side:dir};
-    keeper.diveCooldown=1.05;
-    keeper.vy=dir*385;keeper.vx=-95;
-  }
-  if(dive){
-    dive.elapsed+=dt;
-    const slowing=1-.38*clamp(dive.elapsed/dive.duration,0,1);
-    keeper.x+=keeper.vx*dt*slowing;
-    keeper.y+=keeper.vy*dt*slowing;
-    if(dive.elapsed>=dive.duration){dive=null;keeper.vx=0;keeper.vy=0}
-  }else{
-    const chase=(axis,target,v,maxSpeed)=>{
-      // Acceleration-limited footwork: the keeper cannot teleport to a shot.
-      const desired=clamp((target-keeper[axis])*5.5,-maxSpeed,maxSpeed);
-      return v+clamp(desired-v,-1050*dt,1050*dt);
-    };
-    keeper.vx=chase('x',desiredX,keeper.vx,155);
-    keeper.vy=chase('y',desiredY,keeper.vy,incoming?235:170);
-    keeper.x+=keeper.vx*dt;keeper.y+=keeper.vy*dt;
-  }
-  keeper.x=clamp(keeper.x,field.r-165,goalX);
-  keeper.y=clamp(keeper.y,goal.top-keeper.r-15,goal.bottom+keeper.r+15);
+ dive=null;keeper.diveCooldown=0;
+ const goalX=field.r-keeper.r-11,attacking=possession||Math.hypot(ball.vx,ball.vy)<130,closeness=clamp((ball.x-(field.r-510))/390,0,1),desiredX=clamp(goalX-(attacking?108*closeness:Math.min(45,55*closeness)),field.r-160,goalX),distX=Math.max(1,field.r-ball.x),angleMiddle=(Math.atan2(goal.top-ball.y,distX)+Math.atan2(goal.bottom-ball.y,distX))/2;
+ const incoming=!possession&&Math.hypot(ball.vx,ball.vy)>160&&ball.vx>85&&ball.x<field.r+ball.r,targetY=clamp(incoming?projectedShotY(keeper.x):ball.y+Math.tan(angleMiddle)*(field.r-desiredX),goal.top-keeper.r*.5,goal.bottom+keeper.r*.5);
+ const chase=(axis,target,velocity,maxSpeed)=>{const desired=clamp((target-keeper[axis])*5.5,-maxSpeed,maxSpeed);return velocity+clamp(desired-velocity,-1050*dt,1050*dt);};
+ keeper.vx=chase('x',desiredX,keeper.vx,155);keeper.vy=chase('y',targetY,keeper.vy,incoming?235:170);keeper.x=clamp(keeper.x+keeper.vx*dt,field.r-165,goalX);keeper.y=clamp(keeper.y+keeper.vy*dt,goal.top-keeper.r-15,goal.bottom+keeper.r+15);
 }
 function tick(dt){clock+=dt;
 clearanceCooldown=Math.max(0,clearanceCooldown-dt);
@@ -1667,12 +1624,7 @@ if(charging&&shotTarget){
  ctx.moveTo(tx,ty-13);ctx.lineTo(tx,ty-5);ctx.moveTo(tx,ty+5);ctx.lineTo(tx,ty+13);ctx.stroke();
 }
 ctx.restore();}
-if(!view.players){
-if(dive){
- ctx.save();ctx.translate(keeper.x,keeper.y);ctx.rotate(Math.atan2(dive.uy,dive.ux));
- ctx.scale((keeper.r+16)/keeper.r,(keeper.r-3)/keeper.r);drawKitDisc(ctx,0,0,keeper.r,keeper.kitId||'red',keeper.number||1);
- ctx.restore();
-}else drawKitDisc(ctx,keeper.x,keeper.y,keeper.r,keeper.kitId||'red',keeper.number||1);
+if(!view.players){drawKitDisc(ctx,keeper.x,keeper.y,keeper.r,keeper.kitId||'red',keeper.number||1);
 }else for(const mate of view.players){if(mate.id===player.id)continue;ctx.save();if(mate.stretch&&mate.dash>0){ctx.translate(mate.x,mate.y);ctx.scale(1,1.5);drawKitDisc(ctx,0,0,mate.r,mate.kitId,mate.number);}else drawKitDisc(ctx,mate.x,mate.y,mate.r,mate.kitId,mate.number);ctx.restore();}
 drawKitDisc(ctx,player.x,player.y,player.r,player.kitId||'blue',player.number||menuState.number);circle(ball.x,ball.y,ball.r,'#fff');drawPlayerNames(ctx,view);
 ctx.restore();
@@ -1760,10 +1712,10 @@ const OriginalRules=(()=>{
  function step(room,dt,api){
   const duration=api.periodDuration??60;room.clock+=dt;room.kickoff=Math.max(0,room.kickoff-dt);if(!room.kickoff)room.periodElapsed=Math.min(duration,room.periodElapsed+dt);
   const active=room.players.filter(p=>p.connected),b=room.ball;b.owner=null;b.curve=null;
-  for(const p of active){p.cooldown=Math.max(0,p.cooldown-dt);p.stamina=1;p.dash=0;p.stretch=false;p.charging=false;p.charge=0;if(Date.now()-p.inputAt>750)p.input={x:0,y:0,kick:false};const requested=p.actions.splice(0).some(a=>['kick','shoot','pass'].includes(a));if(room.kickoff>0){p.vx=p.vy=0;p.kicking=false;continue;}move(p,p.input,dt);if(requested||p.input.kick)kick(room,p,api.event);}
+  for(const p of active){if(p.practiceKeeper){const right=(p.team===2)===(room.half%2===1),guardX=right?field.r-45:field.l+45,incoming=right?b.vx>30:b.vx< -30,arrival=incoming?clamp((guardX-b.x)/b.vx,0,.45):0,targetY=clamp(b.y+b.vy*arrival,goal.top+p.r*.5,goal.bottom-p.r*.5);p.input={x:clamp((guardX-p.x)/45,-1,1),y:clamp((targetY-p.y)/45,-1,1),kick:false};p.inputAt=Date.now();p.actions=[];}p.cooldown=Math.max(0,p.cooldown-dt);p.stamina=1;p.dash=0;p.stretch=false;p.charging=false;p.charge=0;if(Date.now()-p.inputAt>750)p.input={x:0,y:0,kick:false};const requested=p.actions.splice(0).some(a=>['kick','shoot','pass'].includes(a));if(room.kickoff>0){p.vx=p.vy=0;p.kicking=false;continue;}move(p,p.input,dt);if(requested||p.input.kick)kick(room,p,api.event);}
   for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){const a=active[i],p=active[j],dx=p.x-a.x,dy=p.y-a.y,d=Math.hypot(dx,dy),radius=a.r+p.r;if(d<radius){const nx=d?dx/d:1,ny=d?dy/d:0,shift=(radius-d)/2;a.x=clamp(a.x-nx*shift,field.l+a.r,field.r-a.r);a.y=clamp(a.y-ny*shift,field.t+a.r,field.b-a.r);p.x=clamp(p.x+nx*shift,field.l+p.r,field.r-p.r);p.y=clamp(p.y+ny*shift,field.t+p.r,field.b-p.r);const speed=(p.vx-a.vx)*nx+(p.vy-a.vy)*ny;if(speed<0){const impulse=-speed*.6;a.vx-=nx*impulse;a.vy-=ny*impulse;p.vx+=nx*impulse;p.vy+=ny*impulse;}}}
   if(!room.kickoff){b.x+=b.vx*dt;b.y+=b.vy*dt;const damping=Math.exp(-.6*dt);b.vx*=damping;b.vy*=damping;
-   for(const p of active){const dx=b.x-p.x,dy=b.y-p.y,d=Math.hypot(dx,dy),radius=p.r+b.r;if(d<radius){const speed=Math.hypot(p.vx,p.vy),nx=d>.001?dx/d:speed>0?p.vx/speed:p.dx,ny=d>.001?dy/d:speed>0?p.vy/speed:p.dy,depth=radius-d;b.x+=nx*depth*.85;b.y+=ny*depth*.85;p.x=clamp(p.x-nx*depth*.15,field.l+p.r,field.r-p.r);p.y=clamp(p.y-ny*depth*.15,field.t+p.r,field.b-p.r);const impact=(b.vx-p.vx)*nx+(b.vy-p.vy)*ny;if(impact<0){const impulse=-impact*1.45/1.15;b.vx+=nx*impulse;b.vy+=ny*impulse;p.vx-=nx*impulse*.15;p.vy-=ny*impulse*.15;}touch(room,p,-impact);if(p.input.kick)kick(room,p,api.event);}}
+   for(const p of active){const dx=b.x-p.x,dy=b.y-p.y,d=Math.hypot(dx,dy),radius=p.r+b.r;if(d<radius){const speed=Math.hypot(p.vx,p.vy),nx=d>.001?dx/d:speed>0?p.vx/speed:p.dx,ny=d>.001?dy/d:speed>0?p.vy/speed:p.dy,depth=radius-d;b.x+=nx*depth*.85;b.y+=ny*depth*.85;p.x=clamp(p.x-nx*depth*.15,field.l+p.r,field.r-p.r);p.y=clamp(p.y-ny*depth*.15,field.t+p.r,field.b-p.r);const impact=(b.vx-p.vx)*nx+(b.vy-p.vy)*ny;if(impact<0){const impulse=-impact*1.45/1.15;b.vx+=nx*impulse;b.vy+=ny*impulse;p.vx-=nx*impulse*.15;p.vy-=ny*impulse*.15;}if(p.practiceKeeper&&impact< -120&&room.players.find(q=>q.id===b.lastTouchId)?.team!==p.team)p.matchStats.saves++;touch(room,p,-impact);if(p.input.kick)kick(room,p,api.event);}}
   }
   const bounce=(speed)=>{if(speed<120||room.clock-(room.lastBounce??-99)<.095)return;room.lastBounce=room.clock;api.event(room,'bounce',{volume:.015+clamp((speed-100)/850,0,1)*.215,rate:1});};
   if(b.y<field.t+b.r||b.y>field.b-b.r){bounce(Math.abs(b.vy));b.y=clamp(b.y,field.t+b.r,field.b-b.r);b.vy=(b.y===field.t+b.r?1:-1)*Math.abs(b.vy)*.82;}
@@ -1801,7 +1753,7 @@ function reset(room){
  const original=room.mode==='original',field=original?OriginalRules.field:module.exports.field,cx=(field.l+field.r)/2,cy=(field.t+field.b)/2;
  room.roundId=(room.roundId||0)+1;
  room.ball={x:cx,y:cy,r:9,vx:0,vy:0,spin:0,owner:null,lastKickTime:0,lastPasserId:null,lastPasserTeam:0,lastPasserClass:null,lastTouchId:null,assistId:null,curve:null};
- for(const team of [1,2]){const members=room.players.filter(p=>p.team===team);members.forEach((p,i)=>{const dir=attacksRight(room,team)?1:-1;p.x=cx-dir*235;p.y=cy+(i-(members.length-1)/2)*125;if(!original&&p.classId==='goalkeeper')p.x=dir>0?field.l+55:field.r-55;Object.assign(p,{vx:0,vy:0,dx:dir,dy:0,mx:dir,my:0,stamina:1,regen:0,dash:0,dashGhost:0,stretch:false,charging:false,charge:0,cooldown:0,ability:0,wallArmed:0,wallBoost:0,firstTouch:0,exhausted:false,input:{x:0,y:0,ax:cx,ay:cy,sprint:false,charging:false},actions:[]});});}
+ for(const team of [1,2]){const members=room.players.filter(p=>p.team===team);members.forEach((p,i)=>{const dir=attacksRight(room,team)?1:-1;p.x=cx-dir*235;p.y=cy+(i-(members.length-1)/2)*125;if((!original&&p.classId==='goalkeeper')||p.practiceKeeper)p.x=dir>0?field.l+55:field.r-55;Object.assign(p,{vx:0,vy:0,dx:dir,dy:0,mx:dir,my:0,stamina:1,regen:0,dash:0,dashGhost:0,stretch:false,charging:false,charge:0,cooldown:0,ability:0,wallArmed:0,wallBoost:0,firstTouch:0,exhausted:false,input:{x:0,y:0,ax:cx,ay:cy,sprint:false,charging:false},actions:[]});});}
  room.kickoff=1;room.history=[];
 }
 function event(room,type,data={}){room.events.push({id:++room.eventId,t:room.clock,type,...data});if(room.events.length>48)room.events.shift();}
@@ -1901,7 +1853,7 @@ const originalMode=(()=>{
  function configure(mode){menuState.mode=mode==='original'?'original':'normal';Object.assign(field,enabled()?OriginalRules.field:normalField);Object.assign(goal,enabled()?OriginalRules.goal:normalGoal);centerX=(field.l+field.r)/2;centerY=(field.t+field.b)/2;document.body.classList.toggle('original-mode',enabled());mobileStatus.textContent=enabled()?'MOVETE Y TOCÁ PATEAR':'TOCÁ PARA APUNTAR Y PATEAR';}
  function stop(){active=false;room=null;held.clear();localFrames=[];replayId='';localSounds=[];soundIndex=0;stopGameSounds();replay.active=false;replayBadge.style.display='none';document.body.classList.remove('replaying');sequenceLocked=false;acc=0;}
  function normalize(state){const turned=state.match?.half%2===0;if(!turned)return state;const mirror=p=>({...p,x:field.l+field.r-p.x,vx:-p.vx,dx:Number.isFinite(p.dx)?-p.dx:p.dx});return {...state,players:state.players.map(mirror),ball:mirror(state.ball)};}
- function startPractice(){stop();configure('original');matchFlow.clear();const p=originalCore.player('local',{name:menuState.ui.prefs.name,number:menuState.number,classId:'midfield'},1);room={mode:'original',settings:originalSettings.value,players:[p],paused:false,kits:{1:menuState.ui.prefs.kitOne,2:menuState.ui.prefs.kitTwo}};originalCore.start(room);selectedClass='midfield';active=true;lastPhase='';lastEventId=0;document.body.classList.add('class-chosen');clearInput();sync();camera.x=player.x;camera.y=player.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);updateMobileMode();mobileStatus.textContent='MOVETE Y TOCÁ PATEAR';}
+ function startPractice(){stop();configure('original');matchFlow.clear();const p=originalCore.player('local',{name:menuState.ui.prefs.name,number:menuState.number,classId:'midfield'},1);const goalie=originalCore.player('practice-keeper',{name:'ARQUERO',number:1,classId:'goalkeeper'},2);goalie.practiceKeeper=true;room={mode:'original',settings:originalSettings.value,players:[p,goalie],paused:false,kits:{1:menuState.ui.prefs.kitOne,2:menuState.ui.prefs.kitTwo}};originalCore.start(room);selectedClass='midfield';active=true;lastPhase='';lastEventId=0;document.body.classList.add('class-chosen');clearInput();sync();camera.x=player.x;camera.y=player.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);updateMobileMode();mobileStatus.textContent='MOVETE Y TOCÁ PATEAR';}
  function sync(){if(!room)return;const phase=room.phase;flip=room.half%2===0;const state=normalize(originalCore.snapshot(room)),p=state.players[0];Object.assign(player,p,{kitId:room.kits[1]});Object.assign(ball,state.ball);score=[...room.score];updateScore();clock=room.clock;possession=false;charging=false;stamina=1;charge=0;
   if(phase!==lastPhase){held.clear();clearInput();sequenceLocked=phase!=='playing';replay.active=phase==='replay';document.body.classList.toggle('replaying',replay.active);replayBadge.style.display=replay.active?'flex':'none';if(replay.active){replayBadge.textContent='● REPETICIÓN · TOCÁ PARA SALTEAR';localFrames=room.replay.frames.map(normalize);replayId=room.replay.id;localSounds=room.events.filter(e=>['kick','bounce'].includes(e.type)&&e.t>=room.replay.from);soundIndex=0;}else{localFrames=[];camera.x=p.x;camera.y=p.y;clampCameraToPitch(camera);}lastPhase=phase;}
   for(const e of room.events){if(e.id<=lastEventId)continue;lastEventId=e.id;if(phase==='playing'&&['kick','bounce'].includes(e.type))sfx(e.type,e.volume,e.rate,false);}
@@ -1938,7 +1890,7 @@ const originalSettings=(()=>{
  function change(item,direction){if(!editable())return;draft[item.key]=item.step?Math.max(item.min,Math.min(item.max,draft[item.key]+direction*item.step)):!draft[item.key];render();}
  function open(origin){if(menuState.transitioning)return;from=origin;draft=OriginalRules.settings(online.room?.settings||savedByMode[currentMode()]);render();menuState.ui.showPage('MatchSettings');}
  function roomUpdated(){if(menuState.ui.getPage()!=='MatchSettings')return;draft=OriginalRules.settings(online.room?.settings||savedByMode[currentMode()]);render();}
- el('openOriginalSettings').addEventListener('click',()=>open('Play'));el('lobbyOriginalSettings').addEventListener('click',()=>open('Lobby'));el('originalSettingsBack').addEventListener('click',()=>menuState.ui.showPage(from));
+ el('openOriginalSettings').addEventListener('click',()=>open('RoomAccess'));el('lobbyOriginalSettings').addEventListener('click',()=>open('Lobby'));el('originalSettingsBack').addEventListener('click',()=>menuState.ui.showPage(from));
  el('saveOriginalSettings').addEventListener('click',()=>{if(!editable())return;const saved=OriginalRules.settings(draft),mode=currentMode();savedByMode[mode]=saved;try{localStorage.setItem(mode==='original'?'canchita.original-settings.v1':'canchita.normal-settings.v1',JSON.stringify(saved));}catch{}if(online.room){online.send({type:'settings',settings:saved});menuState.ui.showPage('Lobby');return;}menuState.ui.showPage(from);});
  function summary(settings){const s=OriginalRules.settings(settings);return s.periods+' × '+format('duration',s.duration)+(s.goalLimit?' · '+s.goalLimit+' GOLES':'');}
  return {open,roomUpdated,summary,get value(){return {...savedByMode[currentMode()]};}};
@@ -2295,7 +2247,7 @@ const matchFlow=(()=>{
  function renderPublicRooms(){const list=el('publicRoomsList');list.replaceChildren();for(const room of publicEntries){const row=document.createElement('div');row.className='publicRoomRow';const info=document.createElement('div'),name=document.createElement('strong'),details=document.createElement('span');name.textContent='SALA DE '+room.hostName;details.textContent=room.size+'V'+room.size+' · '+room.players+' / '+room.maxPlayers+' JUGADORES · '+originalSettings.summary(room.settings);info.append(name,details);const join=document.createElement('button');join.type='button';join.className='smallButton';join.textContent=room.players>=room.maxPlayers?'LLENA':'ENTRAR';join.disabled=connecting||room.players>=room.maxPlayers;join.addEventListener('click',()=>joinPublicRoom(room.id));row.append(info,join);list.append(row);}}
  function refreshPublicRooms(){if(online.room||connecting)return;connectionFeedback('BUSCANDO SALAS…');const request={type:'listRooms',mode:menuState.mode||'normal'};try{address=endpoint(defaultAddress());if(ws?.readyState===1)online.send(request);else openSocket(request);}catch(error){connectionFeedback(error.message);}}
  function joinPublicRoom(publicId){if(connecting||online.room)return;const prefs=ui.prefs;pending={type:'joinPublic',version:1,mode:menuState.mode||'normal',publicId,name:prefs.name,number:prefs.number,classId:menuState.mode==='original'?'midfield':prefs.classId};connecting=true;connectionFeedback('ENTRANDO…');renderPublicRooms();try{address=endpoint(defaultAddress());if(ws?.readyState===1)online.send(pending);else openSocket(pending);}catch(error){connecting=false;connectionFeedback(error.message);renderPublicRooms();}}
- el('openPublicRooms').addEventListener('click',()=>{if(online.room){ui.showPage('Lobby');return;}if(originalMode.active){originalMode.stop();selectedClass=null;}mode='public';pending=null;publicEntries=[];el('publicRoomsList').replaceChildren();ui.showPage('PublicRooms');refreshPublicRooms();});
+ el('openPublicRooms').addEventListener('click',()=>{if(online.room){ui.showPage('Lobby');return;}if(originalMode.active){originalMode.stop();selectedClass=null;}mode='public';pending=null;publicEntries=[];el('publicRoomsTitle').textContent='PÚBLICAS · '+(menuState.mode==='original'?'ORIGINAL':'NORMAL');el('publicRoomsList').replaceChildren();ui.showPage('PublicRooms');refreshPublicRooms();});
  el('refreshPublicRooms').addEventListener('click',refreshPublicRooms);
  el('publicRoomsBack').addEventListener('click',()=>{if(!online.room){manual=true;clearTimeout(retryTimer);if(ws)ws.close();ws=null;pending=null;connecting=false;}ui.showPage('Play');});
  setInterval(()=>{if(ui.getPage()==='PublicRooms'&&!document.hidden&&!connecting&&!online.room&&ws?.readyState===1)online.send({type:'listRooms',mode:menuState.mode||'normal'});},5000);
@@ -2304,7 +2256,7 @@ const matchFlow=(()=>{
  online.access=next=>{
   if(originalMode.active){originalMode.stop();selectedClass=null;}
   if(online.room){ui.showPage('Lobby');return;}
-  mode=next;el('publicRoom').checked=false;updatePublicCheckbox();el('accessTitle').textContent=mode==='create'?'CREAR SALA':'UNIRSE A SALA';
+  mode=next;el('openOriginalSettings').hidden=mode!=='create';el('publicRoom').checked=false;updatePublicCheckbox();el('accessTitle').textContent=mode==='create'?'CREAR SALA':'UNIRSE A SALA';
   el('roomCodeField').hidden=mode==='create';el('roomCode').required=mode==='join';el('roomCode').value='';el('roomPassword').value='';
   el('connectRoom').textContent=mode==='create'?'CREAR':'ENTRAR';el('connectRoom').disabled=false;el('accessFeedback').textContent='';
   el('serverField').hidden=['http:','https:'].includes(location.protocol)||Boolean(DEFAULT_SERVER);el('serverAddress').value=defaultAddress();
@@ -2383,7 +2335,7 @@ const matchFlow=(()=>{
   ui.sceneChange(()=>{ui.resumeNow();camera.x=player.x;camera.y=player.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);},{game:true});
  }
  function receive(m){
-  if(m.type==='publicRooms'){if(pending?.type==='joinPublic')return;connecting=false;publicEntries=Array.isArray(m.rooms)?m.rooms:[];renderPublicRooms();el('publicRoomsFeedback').textContent=publicEntries.length?'':'NO HAY SALAS PÚBLICAS DISPONIBLES';return;}
+  if(m.type==='publicRooms'){if(pending?.type==='joinPublic')return;connecting=false;publicEntries=Array.isArray(m.rooms)?m.rooms.filter(room=>room.mode===(menuState.mode||'normal')):[];renderPublicRooms();el('publicRoomsFeedback').textContent=publicEntries.length?'':'NO HAY SALAS PÚBLICAS DISPONIBLES';return;}
   if(m.type==='pong'){latency=latency*.7+clamp((performance.now()-m.at)/2000,0,.5)*.3;return;}
   if(m.type==='hello'){if(m.version!==1){el('accessFeedback').textContent='Actualizá el juego.';online.leave();}return;}
   if(m.type==='error'){
