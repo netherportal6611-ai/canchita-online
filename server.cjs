@@ -99,7 +99,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
    if(m.type==='input'){
     if(room.phase!=='playing'||room.paused)return;
     if(!['x','y','ax','ay','bend'].every(k=>Number.isFinite(m[k])))return;
-    p.input={x:Math.max(-1,Math.min(1,m.x)),y:Math.max(-1,Math.min(1,m.y)),ax:Math.max(-1000,Math.min(2400,m.ax)),ay:Math.max(-1000,Math.min(1700,m.ay)),bend:Math.max(-.6,Math.min(.6,m.bend)),sprint:m.sprint===true,charging:m.charging===true,kick:m.kick===true};p.inputAt=now;
+    p.input={x:Math.max(-1,Math.min(1,m.x)),y:Math.max(-1,Math.min(1,m.y)),ax:Math.max(-1000,Math.min(2400,m.ax)),ay:Math.max(-1000,Math.min(1700,m.ay)),bend:Math.max(-.6,Math.min(.6,m.bend)),sprint:room.mode!=='original'&&m.sprint===true,charging:room.mode!=='original'&&m.charging===true,kick:room.mode==='original'&&m.kick===true};p.inputAt=now;
     if(Array.isArray(m.actions))for(const a of m.actions.slice(0,3))if(['shoot','pass','dash','ability','kick'].includes(a)&&p.actions.length<6)p.actions.push(a);
     return;
    }
