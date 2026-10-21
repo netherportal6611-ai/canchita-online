@@ -409,6 +409,15 @@ body.original-mode.playing #mobileActions{display:flex;bottom:var(--touch-bottom
 
 @media(orientation:landscape) and (max-height:540px) and (max-width:1100px){#roomAccessForm>#openOriginalSettings{grid-column:1/-1}.publicRoomsPage h2{font-size:24px}}
 
+/* One left-aligned column in both mode menus. */
+#pagePlay .menuTiles{display:flex;flex-direction:column;width:min(100%,380px)}
+body.playing #replayBadge,body.touch-mode.playing #replayBadge{top:max(12px,env(safe-area-inset-top));border-color:#db3154!important;background-color:#484848;gap:8px}
+#lobbyOriginalSettings,body.original-mode #lobbyOriginalSettings{display:flex;align-items:center;justify-content:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:8px;background:transparent!important;border:0;color:#fff;flex:none}
+#lobbyOriginalSettings svg{display:block;width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:square;stroke-linejoin:miter}
+@media(orientation:landscape) and (max-height:540px) and (max-width:1100px){#pagePlay .menuTiles{display:flex;flex-direction:column;width:min(100%,350px);gap:8px}#pagePlay .menuTile,body.original-mode #pagePlay .menuTile{min-height:40px;padding:8px 16px;font-size:17px}#lobbyOriginalSettings,body.original-mode #lobbyOriginalSettings{grid-area:back;width:44px;min-width:44px;height:40px;min-height:40px;margin-left:52px;justify-self:start;padding:6px}}
+
+body.playing:not(.touch-mode) #replayBadge{left:auto;right:18px;transform:none}
+
 </style>
 <!-- Embedded fonts. Source: https://github.com/google/fonts
 Oxanium:
@@ -740,7 +749,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <label id="publicRoomField" class="publicRoomToggle" hidden><span>SALA PÚBLICA</span><input id="publicRoom" type="checkbox"></label>
       <label id="roomPasswordField" class="menuField">CONTRASEÑA<input id="roomPassword" type="password" minlength="1" maxlength="64" autocomplete="off" required></label>
       <label id="serverField" class="menuField" hidden>SERVIDOR<input id="serverAddress" type="url" placeholder="https://canchita-online.onrender.com" autocomplete="url"></label>
-      <button id="openOriginalSettings" class="menuWide" type="button">PERSONALIZAR PARTIDO</button>
       <button id="connectRoom" class="menuWide" type="submit">CREAR</button>
       <p id="accessFeedback" class="onlineFeedback" role="status" aria-live="polite"></p>
     </form>
@@ -765,7 +773,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <div class="roomSettings" aria-label="Formato del partido"><button class="modeButton" data-size="1" type="button">1V1</button><button class="modeButton" data-size="2" type="button">2V2</button><button class="modeButton" data-size="3" type="button">3V3</button></div>
     <div class="teamGrid"><section class="teamPanel"><div class="teamHeader"><h3>EQUIPO 1</h3><div id="kitPicker1" class="teamKitPicker" role="group" aria-label="Conjunto del equipo 1"><button id="kitPrev1" class="kitArrow" type="button" aria-label="Conjunto anterior del equipo 1" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button><canvas id="kitPreview1" class="kitDisc" width="132" height="132" role="img" aria-label="Conjunto, número 10"></canvas><button id="kitNext1" class="kitArrow" type="button" aria-label="Conjunto siguiente del equipo 1" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button></div></div><div id="teamOne" class="teamSlots"></div><button id="joinOne" class="smallButton" type="button">ELEGIR EQUIPO 1</button></section><section class="teamPanel"><div class="teamHeader"><h3>EQUIPO 2</h3><div id="kitPicker2" class="teamKitPicker" role="group" aria-label="Conjunto del equipo 2"><button id="kitPrev2" class="kitArrow" type="button" aria-label="Conjunto anterior del equipo 2" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button><canvas id="kitPreview2" class="kitDisc" width="132" height="132" role="img" aria-label="Conjunto, número 10"></canvas><button id="kitNext2" class="kitArrow" type="button" aria-label="Conjunto siguiente del equipo 2" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button></div></div><div id="teamTwo" class="teamSlots"></div><button id="joinTwo" class="smallButton" type="button">ELEGIR EQUIPO 2</button></section></div>
     <div class="menuChoiceGrid" aria-label="Elegí tu clase"><button class="menuClass" data-room-class="forward" type="button">DELANTERO</button><button class="menuClass" data-room-class="midfield" type="button">MEDIOCAMPISTA</button><button class="menuClass" data-room-class="defender" type="button">DEFENSA</button><button class="menuClass" data-room-class="goalkeeper" type="button">ARQUERO</button></div>
-    <div class="menuRow"><button id="readyButton" class="menuWide" type="button">LISTO</button><button id="startMatch" class="menuWide" type="button" disabled>INICIAR PARTIDO</button><span id="roomCount"></span></div><button id="lobbyOriginalSettings" class="smallButton" type="button">AJUSTES DEL PARTIDO</button>
+    <div class="menuRow"><button id="readyButton" class="menuWide" type="button">LISTO</button><button id="startMatch" class="menuWide" type="button" disabled>INICIAR PARTIDO</button><span id="roomCount"></span></div><button id="lobbyOriginalSettings" class="smallButton settingsArrow" type="button" aria-label="Personalizar partido" title="Personalizar partido"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 8 7 7 7-7"/></svg></button>
     <p id="roomFeedback" class="onlineFeedback" role="status" aria-live="polite"></p>
     <button id="returnMatch" class="smallButton" type="button" hidden>VOLVER A LA SALA</button>
     <button id="leaveRoom" class="menuBack backArrow" type="button" aria-label="Volver a jugar"><svg viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 244 231 94Q250 80 250 104V185C388 192 485 279 511 403Q515 425 498 420C421 341 337 315 250 321V409Q250 431 231 416L7 268Q-7 256 7 244Z"/></svg></button>
@@ -1855,7 +1863,7 @@ const originalMode=(()=>{
  function normalize(state){const turned=state.match?.half%2===0;if(!turned)return state;const mirror=p=>({...p,x:field.l+field.r-p.x,vx:-p.vx,dx:Number.isFinite(p.dx)?-p.dx:p.dx});return {...state,players:state.players.map(mirror),ball:mirror(state.ball)};}
  function startPractice(){stop();configure('original');matchFlow.clear();const p=originalCore.player('local',{name:menuState.ui.prefs.name,number:menuState.number,classId:'midfield'},1);const goalie=originalCore.player('practice-keeper',{name:'ARQUERO',number:1,classId:'goalkeeper'},2);goalie.practiceKeeper=true;room={mode:'original',settings:originalSettings.value,players:[p,goalie],paused:false,kits:{1:menuState.ui.prefs.kitOne,2:menuState.ui.prefs.kitTwo}};originalCore.start(room);selectedClass='midfield';active=true;lastPhase='';lastEventId=0;document.body.classList.add('class-chosen');clearInput();sync();camera.x=player.x;camera.y=player.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);updateMobileMode();mobileStatus.textContent='MOVETE Y TOCÁ PATEAR';}
  function sync(){if(!room)return;const phase=room.phase;flip=room.half%2===0;const state=normalize(originalCore.snapshot(room)),p=state.players[0];Object.assign(player,p,{kitId:room.kits[1]});Object.assign(ball,state.ball);score=[...room.score];updateScore();clock=room.clock;possession=false;charging=false;stamina=1;charge=0;
-  if(phase!==lastPhase){held.clear();clearInput();sequenceLocked=phase!=='playing';replay.active=phase==='replay';document.body.classList.toggle('replaying',replay.active);replayBadge.style.display=replay.active?'flex':'none';if(replay.active){replayBadge.textContent='● REPETICIÓN · TOCÁ PARA SALTEAR';localFrames=room.replay.frames.map(normalize);replayId=room.replay.id;localSounds=room.events.filter(e=>['kick','bounce'].includes(e.type)&&e.t>=room.replay.from);soundIndex=0;}else{localFrames=[];camera.x=p.x;camera.y=p.y;clampCameraToPitch(camera);}lastPhase=phase;}
+  if(phase!==lastPhase){held.clear();clearInput();sequenceLocked=phase!=='playing';replay.active=phase==='replay';document.body.classList.toggle('replaying',replay.active);replayBadge.style.display=replay.active?'flex':'none';if(replay.active){replayBadge.textContent='● REPETICIÓN';localFrames=room.replay.frames.map(normalize);replayId=room.replay.id;localSounds=room.events.filter(e=>['kick','bounce'].includes(e.type)&&e.t>=room.replay.from);soundIndex=0;}else{localFrames=[];camera.x=p.x;camera.y=p.y;clampCameraToPitch(camera);}lastPhase=phase;}
   for(const e of room.events){if(e.id<=lastEventId)continue;lastEventId=e.id;if(phase==='playing'&&['kick','bounce'].includes(e.type))sfx(e.type,e.volume,e.rate,false);}
   matchFlow.presentOriginal({...state,goals:room.goalLog});
  }
@@ -1890,7 +1898,7 @@ const originalSettings=(()=>{
  function change(item,direction){if(!editable())return;draft[item.key]=item.step?Math.max(item.min,Math.min(item.max,draft[item.key]+direction*item.step)):!draft[item.key];render();}
  function open(origin){if(menuState.transitioning)return;from=origin;draft=OriginalRules.settings(online.room?.settings||savedByMode[currentMode()]);render();menuState.ui.showPage('MatchSettings');}
  function roomUpdated(){if(menuState.ui.getPage()!=='MatchSettings')return;draft=OriginalRules.settings(online.room?.settings||savedByMode[currentMode()]);render();}
- el('openOriginalSettings').addEventListener('click',()=>open('RoomAccess'));el('lobbyOriginalSettings').addEventListener('click',()=>open('Lobby'));el('originalSettingsBack').addEventListener('click',()=>menuState.ui.showPage(from));
+ el('lobbyOriginalSettings').addEventListener('click',()=>open('Lobby'));el('originalSettingsBack').addEventListener('click',()=>menuState.ui.showPage(from));
  el('saveOriginalSettings').addEventListener('click',()=>{if(!editable())return;const saved=OriginalRules.settings(draft),mode=currentMode();savedByMode[mode]=saved;try{localStorage.setItem(mode==='original'?'canchita.original-settings.v1':'canchita.normal-settings.v1',JSON.stringify(saved));}catch{}if(online.room){online.send({type:'settings',settings:saved});menuState.ui.showPage('Lobby');return;}menuState.ui.showPage(from);});
  function summary(settings){const s=OriginalRules.settings(settings);return s.periods+' × '+format('duration',s.duration)+(s.goalLimit?' · '+s.goalLimit+' GOLES':'');}
  return {open,roomUpdated,summary,get value(){return {...savedByMode[currentMode()]};}};
@@ -1947,12 +1955,16 @@ const originalSettings=(()=>{
   const overlay=document.createElement('div');overlay.id='sceneOverlay';overlay.setAttribute('aria-hidden','true');
   const snapshot=document.createElement('div');snapshot.className='sceneSnapshot';
   snapshot.style.left=oldRect.left+'px';snapshot.style.top=oldRect.top+'px';snapshot.style.width=oldRect.width+'px';snapshot.style.height=oldRect.height+'px';
-  const copy=outgoing.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
+  const copy=outgoing.cloneNode(true);
+  const originals=[outgoing,...outgoing.querySelectorAll('*')],copies=[copy,...copy.querySelectorAll('*')];
+  // Freeze resolved styles while the original IDs, ancestor rules and scene are intact.
+  const scrollPositions=[];
+  originals.forEach((original,index)=>{const node=copies[index],style=getComputedStyle(original);for(const property of style)node.style.setProperty(property,style.getPropertyValue(property),'important');node.style.setProperty('transition','none','important');node.style.setProperty('animation','none','important');node.style.setProperty('pointer-events','none','important');if(original instanceof HTMLInputElement){node.value=original.value;node.checked=original.checked;}else if(original instanceof HTMLSelectElement)node.selectedIndex=original.selectedIndex;scrollPositions.push({node,top:original.scrollTop,left:original.scrollLeft});node.removeAttribute('id');});
   copy.classList.add('sceneGhostContent');copy.hidden=false;copy.inert=true;
-  copy.style.margin='0';copy.style.width=oldRect.width/oldScale+'px';copy.style.height=oldRect.height/oldScale+'px';copy.style.zoom=String(oldScale);
+  for(const [key,value] of Object.entries({margin:'0',position:'relative',top:'0',left:'0',right:'auto',bottom:'auto',width:oldRect.width/oldScale+'px',height:oldRect.height/oldScale+'px',zoom:String(oldScale)}))copy.style.setProperty(key,value,'important');
   const originalCanvases=outgoing.querySelectorAll('canvas'),copiedCanvases=copy.querySelectorAll('canvas');
   originalCanvases.forEach((original,index)=>{if(copiedCanvases[index])copiedCanvases[index].getContext('2d').drawImage(original,0,0);});
-  snapshot.append(copy);overlay.append(snapshot);document.body.append(overlay);
+  snapshot.append(copy);overlay.append(snapshot);document.body.append(overlay);for(const item of scrollPositions){item.node.scrollTop=item.top;item.node.scrollLeft=item.left;}
   menuState.transitioning=true;menuState.open=true;clearInput();
   document.body.classList.add('scene-changing');
   let exitAnimation,enterAnimation;
@@ -2256,7 +2268,7 @@ const matchFlow=(()=>{
  online.access=next=>{
   if(originalMode.active){originalMode.stop();selectedClass=null;}
   if(online.room){ui.showPage('Lobby');return;}
-  mode=next;el('openOriginalSettings').hidden=mode!=='create';el('publicRoom').checked=false;updatePublicCheckbox();el('accessTitle').textContent=mode==='create'?'CREAR SALA':'UNIRSE A SALA';
+  mode=next;el('publicRoom').checked=false;updatePublicCheckbox();el('accessTitle').textContent=mode==='create'?'CREAR SALA':'UNIRSE A SALA';
   el('roomCodeField').hidden=mode==='create';el('roomCode').required=mode==='join';el('roomCode').value='';el('roomPassword').value='';
   el('connectRoom').textContent=mode==='create'?'CREAR':'ENTRAR';el('connectRoom').disabled=false;el('accessFeedback').textContent='';
   el('serverField').hidden=['http:','https:'].includes(location.protocol)||Boolean(DEFAULT_SERVER);el('serverAddress').value=defaultAddress();
@@ -2318,7 +2330,7 @@ const matchFlow=(()=>{
   el('readyButton').disabled=!lobby;el('readyButton').textContent=me.ready?'CANCELAR LISTO':'LISTO';el('readyButton').setAttribute('aria-pressed',String(me.ready));
   el('startMatch').textContent=lobby?'INICIAR PARTIDO':'CONTINUAR';el('startMatch').disabled=lobby?(!host||!room.canStart):false;
   el('returnMatch').hidden=lobby||!host;
-  el('lobbyOriginalSettings').textContent='PARTIDO · '+originalSettings.summary(room.settings);
+  el('lobbyOriginalSettings').setAttribute('title','Personalizar partido · '+originalSettings.summary(room.settings));
   el('roomCount').textContent=room.players.length+' / '+room.size*2+' JUGADORES';
   if(room.paused)el('roomFeedback').textContent='Esperando la reconexión de un jugador…';
   else if(lobby&&!host)el('roomFeedback').textContent='El anfitrión inicia el partido.';
@@ -2373,7 +2385,6 @@ const matchFlow=(()=>{
   replayData={...data,frames:data.frames.map(frame=>normalizeViewState(frame)),elapsed:data.elapsed||0,received:performance.now()};skipRequested=false;skipReplay=false;actions.length=0;clearInput();resetPrediction();
   replaySounds=events.filter(e=>['kick','bounce'].includes(e.type)&&e.t>=data.from);replaySoundIndex=0;replay.active=true;sequenceLocked=true;
   replayBadge.replaceChildren();const label=document.createElement('span');label.textContent='● REPETICIÓN';replayBadge.append(label);
-  if(data.scorerId===online.id){const hint=document.createElement('span');hint.textContent='TOCÁ PARA SALTEAR';replayBadge.append(hint);}
   replayBadge.style.display='flex';document.body.classList.add('replaying');status('');
  }
  function reconcile(p,now,state){
