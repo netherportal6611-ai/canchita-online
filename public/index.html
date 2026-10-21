@@ -375,6 +375,15 @@ body.touch-mode #mobileActions .skill-ready,body.touch-mode #dashButton.sprintin
  body.touch-mode .score{gap:8px;padding:6px 9px}body.touch-mode #matchClock{padding-left:8px;min-width:44px}body.touch-mode #matchHalf{font-size:10px}body.touch-mode #matchTime{font-size:15px}
 }
 
+/* Halftime scoreboard and scorers, with manual continuation. */
+#matchBreak{inset:0;left:0;top:0;transform:none;z-index:140;display:flex;justify-content:center;align-items:center;padding:20px;background:#282828f5;border:0;border-radius:0!important;pointer-events:auto}
+.breakCard{display:flex;flex-direction:column;gap:22px;width:min(800px,100%);max-height:100%;overflow:auto;text-align:center;color:#fff}
+#breakTitle{font-size:26px;margin:0;letter-spacing:2px}.breakScoreboard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;padding:20px;background:#484848;border:2px solid #fff;border-radius:10px}
+#matchBreak .breakScoreboard strong{font-size:64px;line-height:1.1;font-variant-numeric:tabular-nums}.breakScoreboard>span{font-size:20px;font-weight:700}
+.breakScorers{display:grid;grid-template-columns:1fr 1fr;gap:32px;min-height:70px}.breakScorers>div{display:flex;flex-direction:column;gap:10px}.breakScorers>div>div{display:flex;flex-direction:column;gap:3px}#matchBreak .breakScorers strong{font-size:18px}.breakScorers span{font-size:15px;color:#ddd}
+.breakButtons{display:flex;gap:16px}.breakButtons button{flex:1;padding:16px;border:2px solid #fff;border-radius:10px!important;background:#484848;color:#fff;font:700 20px Oxanium,sans-serif;cursor:pointer;transition:transform .24s ease-in-out,background-color .24s ease-in-out}.breakButtons button:hover:not(:disabled){transform:scale(1.04);background:#585858}.breakButtons button:disabled{opacity:.6;cursor:default}#matchBreakCount:empty{display:none}
+@media(orientation:landscape) and (max-height:540px){#matchBreak{padding:12px 24px}.breakCard{gap:12px;width:min(650px,100%)}#breakTitle{font-size:20px}.breakScoreboard{padding:10px;gap:16px}#matchBreak .breakScoreboard strong{font-size:42px}.breakScoreboard>span{font-size:16px}.breakScorers{min-height:30px;gap:20px;overflow:auto}#matchBreak .breakScorers strong{font-size:15px}.breakScorers span{font-size:13px}.breakButtons button{padding:10px;font-size:16px}#matchBreakCount{font-size:13px}}
+
 </style>
 <!-- Embedded fonts. Source: https://github.com/google/fonts
 Oxanium:
@@ -742,7 +751,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 </div>
 <button id="gameMenuButton" type="button">MENÚ</button>
 <div id="onlineStatus" role="status" aria-live="polite" hidden></div>
-<div id="matchBreak" role="status" aria-live="polite" hidden><strong>ENTRETIEMPO</strong><span id="matchBreakCount">SEGUNDO TIEMPO EN 3</span></div>
+<section id="matchBreak" role="dialog" aria-modal="true" aria-labelledby="breakTitle" hidden><div class="breakCard"><h2 id="breakTitle">ENTRETIEMPO</h2><div class="breakScoreboard"><span>EQUIPO 1</span><strong id="breakScore">0 — 0</strong><span>EQUIPO 2</span></div><div class="breakScorers"><div id="breakGoalsOne"></div><div id="breakGoalsTwo"></div></div><div class="breakButtons"><button id="breakResume" type="button">REANUDAR</button><button id="breakExit" type="button">SALIR</button></div><span id="matchBreakCount" role="status" aria-live="polite"></span></div></section>
 
 <button id="fullscreenButton" type="button" title="Pantalla completa" aria-label="Activar o salir de pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg></button>
 <script>
@@ -1934,6 +1943,11 @@ const matchFlow=(()=>{
   const key=(isOnline?'online:':'practice:')+result.id;if(shownResult===key||queuedResult===key)return;queuedResult=key;
   const open=()=>{if(queuedResult!==key||isOnline&&!online.active)return;if(menuState.transitioning){setTimeout(open,40);return;}queuedResult='';shownResult=key;sequenceLocked=true;clearInput();el('matchBreak').hidden=true;renderResult(result,isOnline);menuState.ui.showPage('Results');};open();
  }
+ function paintBreak(currentScore,goals,ready=[]){
+  el('breakScore').textContent=currentScore[0]+' — '+currentScore[1];
+  for(const team of [1,2]){const list=el(team===1?'breakGoalsOne':'breakGoalsTwo'),key=JSON.stringify(goals.filter(g=>g.team===team));if(list.dataset.goals===key)continue;list.dataset.goals=key;list.replaceChildren();const grouped=new Map();for(const g of goals.filter(g=>g.team===team)){const id=(g.id||g.name)+':'+Boolean(g.ownGoal);if(!grouped.has(id))grouped.set(id,{name:g.name,ownGoal:g.ownGoal,times:[]});grouped.get(id).times.push(g.second+'s');}for(const g of grouped.values()){const row=document.createElement('div'),name=document.createElement('strong'),times=document.createElement('span');name.textContent=g.name+(g.ownGoal?' (EC)':'');times.textContent=g.times.join(', ');row.append(name,times);list.append(row);}if(!list.children.length)list.textContent='—';}
+  const voted=online.active&&ready.includes(online.id);el('breakResume').disabled=voted;el('breakResume').textContent=voted?'ESPERANDO…':'REANUDAR';el('matchBreakCount').textContent=online.active&&ready.length?'LISTOS '+ready.length+' / '+network.players.length:'';
+ }
  function receive(state){
   network=state;networkAt=performance.now();
   if(state.phase==='halftime'&&lastNetworkPhase!=='halftime'){clearInput();sequenceLocked=true;}
@@ -1957,22 +1971,21 @@ const matchFlow=(()=>{
    const running=phase==='playing'&&!online.paused&&!network.kickoff;
    paintClock(m.half,Math.max(0,m.remaining-(running?Math.min(.3,(performance.now()-networkAt)/1000):0)));
    el('matchBreak').hidden=phase!=='halftime'||menuState.open;
-   if(phase==='halftime')el('matchBreakCount').textContent='SEGUNDO TIEMPO EN '+Math.max(1,Math.ceil(m.intermission));
+   if(phase==='halftime')paintBreak(network.score,m.goals||[],m.ready||[]);
    if(phase==='finished')sequenceLocked=true;
    return;
   }
   if(!local||!selectedClass)return;
   paintClock(local.half,local.remaining);
   if(menuState.open)return;
-  if(local.phase==='halftime'){
-   local.intermission=Math.max(0,local.intermission-dt);el('matchBreak').hidden=false;el('matchBreakCount').textContent='SEGUNDO TIEMPO EN '+Math.max(1,Math.ceil(local.intermission));
-   if(!local.intermission){local.half=2;local.remaining=60;local.phase='playing';el('matchBreak').hidden=true;sequenceLocked=false;reset();clearInput();}return;
-  }
+  if(local.phase==='halftime'){el('matchBreak').hidden=false;paintBreak(score,local.goals);return;}
   if(local.phase!=='playing'||sequenceLocked||replay.active)return;
   local.remaining=Math.max(0,local.remaining-dt);
-  if(!local.remaining){if(local.half===1){local.phase='halftime';local.intermission=3;sequenceLocked=true;clearInput();el('matchBreak').hidden=false;}else finishLocal();}
+  if(!local.remaining){if(local.half===1){local.phase='halftime';local.intermission=0;sequenceLocked=true;clearInput();el('matchBreak').hidden=false;}else finishLocal();}
  }
  function goal(side){if(online.active||!local||local.phase!=='playing')return;const p=local.players[side];p.goals++;local.goals.push({team:side+1,id:p.id,name:p.name,number:p.number,ownGoal:false,half:local.half,second:Math.min(60,Math.floor(60-local.remaining))});}
+ el('breakResume').addEventListener('click',()=>{if(online.active){online.send({type:'resumeHalf'});return;}if(local?.phase!=='halftime')return;local.half=2;local.remaining=60;local.phase='playing';el('matchBreak').hidden=true;sequenceLocked=false;reset();clearInput();});
+ el('breakExit').addEventListener('click',()=>el('resultsExit').click());
  el('rematchButton').addEventListener('click',()=>{
   if(online.active){online.send({type:'rematch',ready:!online.me()?.rematchReady});return;}
   reset(true);startOffline();menuState.ui.sceneChange(menuState.ui.resumeNow,{game:true});

@@ -87,6 +87,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
    const room=ws.room,p=ws.player;if(!room||!p)return;
    if(m.type==='leave'){remove(room,p);send(ws,{type:'left'});return;}
    if(m.type==='return'&&room.host===p.id){returnLobby(room,'El anfitrión volvió a la sala.');return;}
+   if(m.type==='resumeHalf'&&room.phase==='halftime'){p.halftimeReady=true;if(!room.paused&&room.players.every(x=>x.connected&&x.halftimeReady))physics.resumeHalf(room);broadcast(room,{type:'state',state:physics.snapshot(room),paused:room.paused,events:room.events});return;}
    if(m.type==='rematch'&&room.phase==='finished'){
     p.rematchReady=m.ready===true;publish(room);
     if(room.players.length===room.size*2&&room.players.every(x=>x.connected&&x.rematchReady)&&!room.paused){physics.start(room);broadcast(room,{type:'started',room:lobby(room),state:physics.snapshot(room)});}return;
