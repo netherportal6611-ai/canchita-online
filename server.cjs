@@ -16,7 +16,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
  const send=(ws,data)=>{if(ws?.readyState===WebSocket.OPEN){if(data.type==='state'&&ws.bufferedAmount>64*1024)return;if(ws.bufferedAmount>4*1024*1024){ws.close(1013,'Conexión lenta');return;}ws.send(JSON.stringify(data));}};
  const error=(ws,message)=>send(ws,{type:'error',message});
  const captain=(room,team)=>room.players.find(p=>p.team===team&&p.connected)?.id;
- function lobby(room){return {code:room.code,mode:room.mode||'normal',settings:room.mode==='original'?room.settings:null,size:room.size,host:room.host,phase:room.phase,paused:room.paused,kits:room.kits,players:room.players.map(p=>({id:p.id,name:p.name,number:p.number,classId:p.classId,team:p.team,ready:p.ready,connected:p.connected,rematchReady:Boolean(p.rematchReady),captain:captain(room,p.team)===p.id})),canStart:canStart(room)};}
+ function lobby(room){return {code:room.code,mode:room.mode||'normal',public:room.public===true,settings:room.settings,size:room.size,host:room.host,phase:room.phase,paused:room.paused,kits:room.kits,players:room.players.map(p=>({id:p.id,name:p.name,number:p.number,classId:p.classId,team:p.team,ready:p.ready,connected:p.connected,rematchReady:Boolean(p.rematchReady),captain:captain(room,p.team)===p.id})),canStart:canStart(room)};}
  function canStart(room){return room.phase==='lobby'&&room.players.length===room.size*2&&[1,2].every(t=>room.players.filter(p=>p.team===t).length===room.size)&&room.players.every(p=>p.ready&&p.connected);}
  function broadcast(room,message){for(const p of room.players)send(p.ws,message);}
  const publish=room=>broadcast(room,{type:'lobby',room:lobby(room)});
@@ -43,7 +43,8 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
    const now=Date.now();ws.lastSeen=now;if(now-ws.window>1000){ws.window=now;ws.count=0;}if(++ws.count>240){ws.close(1008,'Demasiados mensajes');return;}
    let m;try{m=JSON.parse(raw);}catch{error(ws,'Mensaje inválido.');return;}if(!m||typeof m!=='object'||Array.isArray(m))return;
    if(m.type==='ping'){send(ws,{type:'pong',at:m.at});return;}
-   if(m.type==='create'||m.type==='join'||m.type==='reconnect'){
+   if(m.type==='listRooms'){const mode=m.mode==='original'?'original':'normal';send(ws,{type:'publicRooms',rooms:[...rooms.values()].filter(room=>room.public===true&&room.mode===mode&&room.phase==='lobby'&&room.players.some(p=>p.connected)).map(room=>({id:room.publicId,hostName:room.players.find(p=>p.id===room.host)?.name||'JUGADOR',mode:room.mode,size:room.size,players:room.players.length,maxPlayers:room.size*2,settings:room.settings}))});return;}
+   if(m.type==='create'||m.type==='join'||m.type==='joinPublic'||m.type==='reconnect'){
     if(ws.player||ws.busy)return;ws.busy=true;
     try{
      if(m.version!==1)throw Error('Esta versión del juego es antigua. Recargá la página.');
@@ -57,7 +58,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
      }else{
       const name=typeof m.name==='string'?m.name.trim().slice(0,18):'';
       if(!name||!Number.isInteger(m.number)||m.number<1||m.number>99||!physics.stats[m.classId])throw Error('Revisá tu nombre, número y clase.');
-      const password=typeof m.password==='string'?m.password:'';if(password.length<1||password.length>64)throw Error('La contraseña debe tener entre 1 y 64 caracteres.');
+      const password=typeof m.password==='string'?m.password:'';if(password.length>64||(m.type==='create'&&m.public!==true&&password.length<1))throw Error('La contraseña debe tener entre 1 y 64 caracteres.');
       if(m.type==='create'){
        if(rooms.size>=maxRooms)throw Error('El servidor está lleno. Probá en unos minutos.');
        if(![1,2,3].includes(m.size))throw Error('Formato inválido.');
@@ -66,11 +67,10 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
        // Recheck limits after asynchronous hashing; never reserve an orphan room.
        if(rooms.size>=maxRooms)throw Error('El servidor está lleno.');
        let code;do{code=Array.from({length:4},()=>alphabet[crypto.randomInt(alphabet.length)]).join('');}while(rooms.has(code));
-       room={code,mode:m.mode==='original'?'original':'normal',settings:physics.settings(m.settings),size:m.size,players:[],host:null,salt,hash,kits:{1:kits.has(m.kit)?m.kit:'blue',2:'red'},phase:'lobby',paused:false,createdAt:Date.now()};rooms.set(code,room);
+       room={code,public:m.public===true,publicId:m.public===true?crypto.randomUUID():null,mode:m.mode==='original'?'original':'normal',settings:physics.settings(m.settings),size:m.size,players:[],host:null,salt,hash,kits:{1:kits.has(m.kit)?m.kit:'blue',2:'red'},phase:'lobby',paused:false,createdAt:Date.now()};rooms.set(code,room);
       }else{
-       room=rooms.get(String(m.code||'').toUpperCase());if(!room)throw Error('Código o contraseña incorrectos.');
-       const hash=await scrypt(password,room.salt,32);if(ws.readyState!==WebSocket.OPEN)return;
-       if(!crypto.timingSafeEqual(hash,room.hash))throw Error('Código o contraseña incorrectos.');
+       if(m.type==='joinPublic'){room=[...rooms.values()].find(room=>room.public===true&&room.publicId===m.publicId);if(!room)throw Error('La sala pública ya no está disponible.');}
+       else{room=rooms.get(String(m.code||'').toUpperCase());if(!room)throw Error('Código o contraseña incorrectos.');if(!room.public){if(!password.length)throw Error('Código o contraseña incorrectos.');const hash=await scrypt(password,room.salt,32);if(ws.readyState!==WebSocket.OPEN)return;if(!crypto.timingSafeEqual(hash,room.hash))throw Error('Código o contraseña incorrectos.');}}
        if(rooms.get(room.code)!==room)throw Error('La sala ya se cerró.');
        if((room.mode||'normal')!==(m.mode==='original'?'original':'normal'))throw Error('Esa sala es del modo '+(room.mode==='original'?'Original':'Normal')+'. Volvé y elegí ese modo.');
        if(room.phase!=='lobby')throw Error('El partido ya empezó.');
@@ -104,7 +104,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
     return;
    }
    if(room.phase!=='lobby')return;
-   if(m.type==='settings'){if(room.mode!=='original'||room.host!==p.id){error(ws,'Solo el anfitrión puede cambiar los ajustes.');return;}room.settings=physics.settings(m.settings);for(const x of room.players)x.ready=false;publish(room);return;}
+   if(m.type==='settings'){if(room.host!==p.id){error(ws,'Solo el anfitrión puede cambiar los ajustes.');return;}room.settings=physics.settings(m.settings);for(const x of room.players)x.ready=false;publish(room);return;}
    if(m.type==='size'&&room.host===p.id&&[1,2,3].includes(m.size)){
     if(room.players.some(x=>room.players.filter(y=>y.team===x.team).length>m.size)){error(ws,'Hay más jugadores que lugares en ese formato.');return;}
     room.size=m.size;for(const x of room.players)x.ready=false;
