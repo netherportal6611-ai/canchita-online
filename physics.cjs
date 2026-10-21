@@ -6,7 +6,9 @@ const stats={forward:{shot:1.2,charge:.75,base:1,drain:1},midfield:{shot:1,charg
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const unit=(x,y,fallback={x:1,y:0})=>{const n=Math.hypot(x,y);return n>.001?{x:x/n,y:y/n}:fallback;};
 function player(id,profile,team){return {id,name:profile.name,number:profile.number,classId:profile.classId,team,ready:false,connected:true,x:0,y:cy,r:17,vx:0,vy:0,dx:team===1?1:-1,dy:0,mx:team===1?1:-1,my:0,stamina:1,regen:0,exhausted:false,dash:0,stretch:false,dashX:1,dashY:0,targetY:cy,cooldown:0,ability:0,wallArmed:0,wallBoost:0,firstTouch:0,receiveAt:-99,receiveFast:false,charge:0,charging:false,input:{x:0,y:0,ax:cx,ay:cy,sprint:false,charging:false},inputAt:0,actions:[]};}
-function start(room){room.score=[0,0];room.clock=0;room.phase='playing';room.events=[];room.eventId=0;room.history=[];room.replay=null;room.matchId=(room.matchId||0)+1;room.half=1;room.periodElapsed=0;room.halftimeRemaining=0;room.goalLog=[];room.result=null;for(const p of room.players){p.matchStats={goals:0,assists:0,steals:0,saves:0,ownGoals:0};p.rematchReady=false;}reset(room);}
+function periodDuration(room){return room.mode==='original'?(room.overtime||!room.settings.duration?Infinity:room.settings.duration):60;}
+function goalLimitReached(room){return room.mode==='original'&&room.settings.goalLimit>0&&Math.max(...room.score)>=room.settings.goalLimit;}
+function start(room){if(room.mode==='original')room.settings=OriginalRules.settings(room.settings);room.overtime=false;room.score=[0,0];room.clock=0;room.phase='playing';room.events=[];room.eventId=0;room.history=[];room.replay=null;room.matchId=(room.matchId||0)+1;room.half=1;room.periodElapsed=0;room.halftimeRemaining=0;room.goalLog=[];room.result=null;for(const p of room.players){p.matchStats={goals:0,assists:0,steals:0,saves:0,ownGoals:0};p.rematchReady=false;}reset(room);}
 function attacksRight(room,team){return (team===1)===(room.half!==2);}
 function finish(room){
  room.phase='finished';room.replay=null;
@@ -14,8 +16,8 @@ function finish(room){
  const best=Math.max(0,...players.map(p=>p.points));room.result={id:room.matchId,score:[...room.score],winner:room.score[0]===room.score[1]?0:room.score[0]>room.score[1]?1:2,players,mvps:best>0?players.filter(p=>p.points===best):[],goals:room.goalLog.slice()};
  for(const p of room.players){p.actions=[];p.charging=false;p.charge=0;p.vx=0;p.vy=0;}event(room,'finished');
 }
-function endPeriod(room){if(room.half===1){room.phase='halftime';room.halftimeRemaining=0;room.replay=null;for(const p of room.players){p.halftimeReady=false;p.actions=[];p.charging=false;p.charge=0;p.vx=0;p.vy=0;}event(room,'halftime');}else finish(room);}
-function resumeHalf(room){if(room.phase!=='halftime')return;room.half=2;room.periodElapsed=0;room.phase='playing';reset(room);event(room,'secondHalf');}
+function endPeriod(room){const periods=room.mode==='original'?room.settings.periods:2;if(room.half<periods){room.phase='halftime';room.halftimeRemaining=0;room.replay=null;for(const p of room.players){p.halftimeReady=false;p.actions=[];p.charging=false;p.charge=0;p.vx=0;p.vy=0;}event(room,'halftime');}else if(room.mode==='original'&&room.settings.goldenGoal&&room.score[0]===room.score[1]){room.overtime=true;room.periodElapsed=0;room.phase='playing';reset(room);event(room,'goldenGoal');}else finish(room);}
+function resumeHalf(room){if(room.phase!=='halftime')return;room.half++;room.periodElapsed=0;room.phase='playing';reset(room);event(room,'secondHalf');}
 function reset(room){
  const original=room.mode==='original',field=original?OriginalRules.field:module.exports.field,cx=(field.l+field.r)/2,cy=(field.t+field.b)/2;
  room.roundId=(room.roundId||0)+1;
@@ -46,23 +48,24 @@ function action(room,p,a){
  if(a==='shoot'&&b.owner===p.id&&p.charging){const target=p.target||{x:p.input.ax,y:p.input.ay};release(room,p,(240+p.charge*850)*s.shot*(1-.15*Math.abs(p.input.bend||0)),dir,target,p.input.bend||0);}
 }
 function rounded(p){const out={};for(const key of ['id','name','number','classId','team','connected','x','y','r','vx','vy','dx','dy','stamina','dash','stretch','ability','wallArmed','wallBoost','firstTouch','receiveAt','receiveFast','charge','charging','kicking'])out[key]=typeof p[key]==='number'?Math.round(p[key]*1000)/1000:p[key];return out;}
-function snapshot(room){const b=room.ball;return {mode:room.mode||'normal',field:room.mode==='original'?OriginalRules.field:field,goal:room.mode==='original'?OriginalRules.goal:goal,t:room.clock,players:room.players.map(rounded),ball:{x:b.x,y:b.y,r:9,vx:b.vx,vy:b.vy,owner:b.owner,lastKickTime:b.lastKickTime},score:[...room.score],phase:room.phase,kickoff:room.kickoff,roundId:room.roundId,replay:room.replay?{id:room.replay.id,scorerId:room.replay.scorerId,elapsed:room.replay.elapsed}:null,match:{id:room.matchId,half:room.half,remaining:Math.max(0,60-room.periodElapsed),intermission:room.halftimeRemaining||0,ready:room.phase==='halftime'?room.players.filter(p=>p.halftimeReady).map(p=>p.id):[],goals:room.phase==='halftime'?room.goalLog:[]},result:room.phase==='finished'?room.result:null};}
+function snapshot(room){const b=room.ball;return {mode:room.mode||'normal',field:room.mode==='original'?OriginalRules.field:field,goal:room.mode==='original'?OriginalRules.goal:goal,t:room.clock,players:room.players.map(rounded),ball:{x:b.x,y:b.y,r:9,vx:b.vx,vy:b.vy,owner:b.owner,lastKickTime:b.lastKickTime},score:[...room.score],phase:room.phase,kickoff:room.kickoff,roundId:room.roundId,replay:room.replay?{id:room.replay.id,scorerId:room.replay.scorerId,elapsed:room.replay.elapsed}:null,match:{id:room.matchId,half:room.half,remaining:Number.isFinite(periodDuration(room))?Math.max(0,periodDuration(room)-room.periodElapsed):null,elapsed:room.periodElapsed,unlimited:!Number.isFinite(periodDuration(room)),overtime:Boolean(room.overtime),periods:room.mode==='original'?room.settings.periods:2,goalLimit:room.mode==='original'?room.settings.goalLimit:0,intermission:room.halftimeRemaining||0,ready:room.phase==='halftime'?room.players.filter(p=>p.halftimeReady).map(p=>p.id):[],goals:room.phase==='halftime'?room.goalLog:[]},result:room.phase==='finished'?room.result:null};}
 function scoreGoal(room,team){
  const scorer=room.players.find(p=>p.id===(room.ball.owner||room.ball.lastTouchId||room.ball.lastPasserId)),ownGoal=Boolean(scorer&&scorer.team!==team);
  if(scorer){scorer.matchStats[ownGoal?'ownGoals':'goals']++;const assist=room.players.find(p=>p.id===room.ball.assistId&&p.id!==scorer.id&&p.team===team);if(assist&&!ownGoal)assist.matchStats.assists++;}
- room.goalLog.push({team,id:scorer?.id||null,name:scorer?.name||'SIN AUTOR',number:scorer?.number||0,ownGoal,half:room.half,second:Math.min(60,Math.floor(room.periodElapsed))});
+ room.goalLog.push({team,id:scorer?.id||null,name:scorer?.name||'SIN AUTOR',number:scorer?.number||0,ownGoal,half:room.half,overtime:Boolean(room.overtime),second:Math.floor(room.periodElapsed)});
  room.score[team-1]++;room.phase='replay';room.history.push(snapshot(room));
  const frames=room.history.slice(),from=frames[0]?.t||room.clock,to=room.clock,slowStart=Math.max(from,room.ball.lastKickTime-.5);
  room.replay={id:room.matchId+':'+room.goalLog.length,scorerId:scorer?.id||null,frames,from,to,slowStart,elapsed:0,duration:Math.max(0,slowStart-from)+(to-Math.max(from,slowStart))/.6+.8};
  event(room,'goal',{team,score:room.score});
  for(const p of room.players){p.actions=[];p.charging=false;}
+ if(room.mode==='original'&&!room.settings.replays)finishReplay(room);
 }
-function finishReplay(room){if(room.phase!=='replay')return;room.replay=null;if(room.periodElapsed>=60)endPeriod(room);else{room.phase='playing';reset(room);event(room,'kickoff');}}
+function finishReplay(room){if(room.phase!=='replay')return;room.replay=null;if(goalLimitReached(room)||(room.overtime&&room.score[0]!==room.score[1]))finish(room);else if(room.periodElapsed>=periodDuration(room))endPeriod(room);else{room.phase='playing';reset(room);event(room,'kickoff');}}
 function step(room,dt){
  if(room.phase==='halftime')return;
  if(room.phase==='replay'){room.replay.elapsed+=dt;if(room.replay.elapsed>=room.replay.duration)finishReplay(room);return;}
  if(room.phase!=='playing')return;
- if(room.mode==='original'){OriginalRules.step(room,dt,{event,snapshot,scoreGoal,endPeriod});return;}
+ if(room.mode==='original'){OriginalRules.step(room,dt,{event,snapshot,scoreGoal,endPeriod,periodDuration:periodDuration(room)});return;}
  room.clock+=dt;room.kickoff=Math.max(0,room.kickoff-dt);
  if(!room.kickoff)room.periodElapsed=Math.min(60,room.periodElapsed+dt);
  const active=room.players.filter(p=>p.connected),b=room.ball;
@@ -109,4 +112,4 @@ function step(room,dt){
  if(!room.history.length||room.clock-room.history[room.history.length-1].t>=1/20-1e-6){room.history.push(snapshot(room));while(room.history.length>2&&room.history[1].t<room.clock-7)room.history.shift();}
  if(room.periodElapsed>=60)endPeriod(room);
 }
-module.exports={field,goal,stats,player,start,resumeHalf,finishReplay,reset,step,snapshot,action,scoreGoal};
+module.exports={settings:OriginalRules.settings,field,goal,stats,player,start,resumeHalf,finishReplay,reset,step,snapshot,action,scoreGoal};
