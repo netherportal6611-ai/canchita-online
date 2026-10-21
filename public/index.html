@@ -275,6 +275,11 @@ body.scene-changing #menuShell,body.scene-changing #classSelect{overflow:hidden!
 .playerSlot.disconnected{opacity:.5}
 #onlineStatus{position:fixed;z-index:130;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);padding:10px 16px;background:#282828;border:2px solid #fff;color:#fff;font-size:16px;text-align:center;max-width:90vw;pointer-events:none}
 body.online-match #mobileFree,body.online-match #mobileReset{display:none!important}
+#fullscreenButton{display:none!important}
+body.menu-open #fullscreenButton{display:flex!important;position:fixed;z-index:125;top:max(8px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));width:44px;height:44px;align-items:center;justify-content:center;padding:8px;border:2px solid #fff;background:#282828;color:#fff;opacity:1;visibility:visible;pointer-events:auto;transition:transform .24s ease-in-out,background-color .24s ease-in-out}
+body.menu-open #fullscreenButton svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2}
+body.menu-open #fullscreenButton:hover{transform:scale(1.12);background:#383838}
+body.menu-open #fullscreenButton:active{transform:scale(1.04)}
 
 /* Teléfono horizontal: equipos a la izquierda, preparación a la derecha. */
 @media (orientation:landscape) and (max-height:540px) and (max-width:1100px){
@@ -296,7 +301,7 @@ body.online-match #mobileFree,body.online-match #mobileReset{display:none!import
  #classSelect .classScene .classChoices,.sceneGhostContent.classScene .classChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(100%,600px);gap:8px}
  #classSelect .classChoice,.sceneGhostContent.classScene .classChoice{min-height:52px;padding:12px 16px;font-size:17px}
  .lobbyPage{display:grid;grid-template-columns:minmax(0,1fr) 210px;grid-template-areas:'heading formats' 'teams classes' 'teams actions' 'teams feedback' 'teams return' 'teams back';gap:7px 14px;align-items:start}
- .lobbyPage>.menuTop{grid-area:heading;min-height:40px}.lobbyPage>.roomSettings{grid-area:formats;align-self:center;max-width:none;width:100%;gap:5px}
+ .lobbyPage>.menuTop{grid-area:heading;min-height:40px}.lobbyPage>.roomSettings{grid-area:formats;align-self:center;max-width:none;width:calc(100% - 48px);gap:5px}
  .lobbyPage .modeButton{min-height:40px;padding:6px 4px;font-size:14px}
  .lobbyPage>.teamGrid{grid-area:teams;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:8px;align-self:stretch}
  .lobbyPage .teamPanel{padding:8px;gap:6px}.lobbyPage .teamHeader{gap:4px;min-height:40px}.lobbyPage .teamPanel h3{font-size:14px;white-space:nowrap}
@@ -320,6 +325,7 @@ body.online-match #mobileFree,body.online-match #mobileReset{display:none!import
  .lobbyPage{grid-template-columns:minmax(0,1fr) 174px;column-gap:8px}.lobbyPage .teamHeader{flex-wrap:wrap;justify-content:center}.lobbyPage .teamPanel h3{font-size:12px}.lobbyPage .menuClass{font-size:12px}.lobbyPage .smallButton{font-size:12px}
 }
 @media (pointer:coarse){
+ body.menu-open #fullscreenButton:hover{transform:none}
  #menuShell button:not(:disabled):hover,#classSelect button:not(:disabled):hover{transform:none}
  #menuShell button:not(:disabled):active,#classSelect button:not(:disabled):active{transform:scale(1.04)}
 }
@@ -639,7 +645,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <div id="mobileActions"><button type="button" id="passButton" aria-label="Pase instantáneo">PASE</button><button type="button" id="abilityButton" aria-label="Habilidad especial">PARED</button></div>
   <button id="skipShot" type="button" aria-label="Saltar al siguiente tiro libre">SALTAR <span aria-hidden="true">››</span></button>
   <div id="replayBadge" aria-live="off"><span>● REPETICIÓN</span></div>
-  <button id="fullscreenButton" type="button" title="Pantalla completa" aria-label="Activar o salir de pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg></button>
+  
   <div id="fadeCurtain" aria-hidden="true"></div>
 <div id="replayEdge" aria-hidden="true"></div>
   <div id="rotateNotice"><span class="rotateIcon">↻</span><strong>Girá el celular</strong><span>Este juego se juega en horizontal</span></div>
@@ -696,6 +702,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 <button id="gameMenuButton" type="button">MENÚ</button>
 <div id="onlineStatus" role="status" aria-live="polite" hidden></div>
 
+<button id="fullscreenButton" type="button" title="Pantalla completa" aria-label="Activar o salir de pantalla completa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg></button>
 <script>
 <!-- CC0 1.0 audio embedded for offline play: kick https://sfxmint.com/sounds/soccer-ball-kick-01; wall rebound https://sfxmint.com/sounds/impact-bounce-15; license https://sfxmint.com/license -->
 
