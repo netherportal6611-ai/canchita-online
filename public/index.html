@@ -2027,6 +2027,18 @@ const matchFlow=(()=>{
  let ws=null,address='',mode='create',pending=null,connecting=false,manual=false,retry=0,retryTimer=0,joinedAt=0,lastSend=0;
  let frames=[],lastPacket=0,lastEvent=0,replayData=null,replaySounds=[],replaySoundIndex=0,skipReplay=false,lastPhase='',renderedSize=0;
  const actions=[];
+ let viewFlipped=false,viewHalf=1;
+ // Keep the player's attack on screen-right. Server coordinates stay canonical.
+ function normalizeViewState(state,live=false){
+  const me=state.players.find(p=>p.id===online.id)||online.me();
+  const half=state.match?.half||viewHalf;
+  const flip=Boolean(me&&((me.team===2)===(half!==2)));
+  if(live){viewFlipped=flip;viewHalf=half;}
+  if(!flip)return state;
+  const mirror=body=>{const out={...body,x:field.l+field.r-body.x};for(const key of ['vx','dx','mx','dashX'])if(Number.isFinite(body[key]))out[key]=-body[key];return out;};
+  return {...state,players:state.players.map(mirror),ball:mirror(state.ball)};
+ }
+
  let predicted=null,latency=.05,lastPing=0,lastSocketPacket=0,replayRequestAt=0,lastRound='',predictionHistory=[],correctionX=0,correctionY=0,inputSignature='',skipRequested=false;
  function resetPrediction(){predicted=null;predictionHistory=[];correctionX=0;correctionY=0;}
  online.me=()=>online.room?.players.find(p=>p.id===online.id);
@@ -2049,7 +2061,7 @@ const matchFlow=(()=>{
  };
  function forget(){try{sessionStorage.removeItem('canchita.connection');}catch{}}
  online.leave=()=>{
-  const wasMatch=online.active;matchFlow.clear();
+  const wasMatch=online.active;matchFlow.clear();viewFlipped=false;viewHalf=1;
   manual=true;clearTimeout(retryTimer);if(ws?.readyState===1)online.send({type:'leave'});if(ws)ws.close();ws=null;pending=null;connecting=false;
   online.room=null;online.active=false;online.id=null;online.token=null;frames=[];predicted=null;actions.length=0;replayData=null;forget();endReplay();status('');
   document.body.classList.remove('online-match');el('connectRoom').disabled=false;
@@ -2114,7 +2126,7 @@ const matchFlow=(()=>{
  }
  function enterMatch(){
   if(!online.active)return;if(menuState.transitioning){setTimeout(enterMatch,40);return;}
-  const me=online.me();selectedClass=me.classId;clearInput();lastMoveX=me.team===1?1:-1;lastMoveY=0;
+  const me=online.me();selectedClass=me.classId;clearInput();lastMoveX=1;lastMoveY=0;
   document.body.classList.add('class-chosen');document.body.classList.toggle('has-ability',selectedClass==='defender'||selectedClass==='midfield');abilityButton.textContent=selectedClass==='defender'?'DESPEJAR':'PARED';updateMobileMode();
   ui.sceneChange(()=>{ui.resumeNow();camera.x=player.x;camera.y=player.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);},{game:true});
  }
@@ -2153,7 +2165,7 @@ const matchFlow=(()=>{
  function beginReplay(data,events){
   if(!data?.frames?.length)return;
   if(replayData?.id===data.id){replayData.elapsed=data.elapsed;replayData.received=performance.now();return;}
-  replayData={...data,elapsed:data.elapsed||0,received:performance.now()};skipRequested=false;skipReplay=false;actions.length=0;clearInput();resetPrediction();
+  replayData={...data,frames:data.frames.map(frame=>normalizeViewState(frame)),elapsed:data.elapsed||0,received:performance.now()};skipRequested=false;skipReplay=false;actions.length=0;clearInput();resetPrediction();
   replaySounds=events.filter(e=>['kick','bounce'].includes(e.type)&&e.t>=data.from);replaySoundIndex=0;replay.active=true;sequenceLocked=true;
   replayBadge.replaceChildren();const label=document.createElement('span');label.textContent='● REPETICIÓN';replayBadge.append(label);
   if(data.scorerId===online.id){const hint=document.createElement('span');hint.textContent='TOCÁ PARA SALTEAR';replayBadge.append(hint);}
@@ -2167,7 +2179,7 @@ const matchFlow=(()=>{
   if(error>140){predicted={x:p.x,y:p.y,vx:p.vx,vy:p.vy};predictionHistory=[];correctionX=correctionY=0;return;}
   if(error>2){correctionX=dx;correctionY=dy;}
  }
- function putState(state){if(!state)return;lastPacket=performance.now();const round=state.match?.id+':'+state.roundId;if(round!==lastRound){lastRound=round;frames=[];resetPrediction();actions.length=0;inputSignature='';if(state.phase==='playing'){clearInput();sequenceLocked=false;const p=state.players.find(p=>p.id===online.id);if(p){camera.x=p.x;camera.y=p.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);lastMoveX=p.dx;lastMoveY=p.dy;}}}frames.push({...state,received:lastPacket});while(frames.length>5)frames.shift();const me=state.players.find(p=>p.id===online.id);if(me){reconcile(me,lastPacket,state);stamina=me.stamina;clearanceCooldown=me.classId==='defender'?me.ability:0;wallCooldown=me.classId==='midfield'?me.ability:0;wallArmedTime=me.wallArmed;firstTouchCooldown=me.firstTouch;lastReceiveTime=me.receiveAt??-100;lastReceiveFast=Boolean(me.receiveFast);possession=state.ball.owner===me.id;if(!possession&&charging)cancelShot();}score=state.score;updateScore();matchFlow.receive(state);}
+ function putState(state){if(!state)return;state=normalizeViewState(state,true);lastPacket=performance.now();const round=state.match?.id+':'+state.roundId;if(round!==lastRound){lastRound=round;frames=[];resetPrediction();actions.length=0;inputSignature='';if(state.phase==='playing'){clearInput();sequenceLocked=false;const p=state.players.find(p=>p.id===online.id);if(p){camera.x=p.x;camera.y=p.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);lastMoveX=p.dx;lastMoveY=p.dy;}}}frames.push({...state,received:lastPacket});while(frames.length>5)frames.shift();const me=state.players.find(p=>p.id===online.id);if(me){reconcile(me,lastPacket,state);stamina=me.stamina;clearanceCooldown=me.classId==='defender'?me.ability:0;wallCooldown=me.classId==='midfield'?me.ability:0;wallArmedTime=me.wallArmed;firstTouchCooldown=me.firstTouch;lastReceiveTime=me.receiveAt??-100;lastReceiveFast=Boolean(me.receiveFast);possession=state.ball.owner===me.id;if(!possession&&charging)cancelShot();}score=state.score;updateScore();matchFlow.receive(state);}
  function blend(a,b,t){const p={...b};for(const k of ['x','y','dx','dy'])if(Number.isFinite(a[k])&&Number.isFinite(b[k]))p[k]=a[k]+(b[k]-a[k])*t;return p;}
  function interpolate(a,b,f){return {...b,ball:blend(a.ball,b.ball,f),players:b.players.map(p=>blend(a.players.find(x=>x.id===p.id)||p,p,f))};}
  function stateAt(list,t,key='t'){
@@ -2188,7 +2200,7 @@ const matchFlow=(()=>{
   const now=performance.now();if(ws?.readyState!==1||ws.bufferedAmount>32768)return;if(now-lastSend<(force?1000/60:1000/40))return;
   const blocked=menuState.open||online.paused||replayData||document.hidden||ws?.readyState!==1||frames.at(-1)?.phase!=='playing';
   const input=blocked?{x:0,y:0}:getInputVector();const target=charging&&shotTarget?shotTarget:touchUI?mobileFacingTarget():mouse;
-  lastSend=now;online.send({type:'input',x:input.x,y:input.y,ax:target.x,ay:target.y,bend,sprint:!blocked&&(keys.has('ShiftLeft')||keys.has('ShiftRight')||dashControl.sprinting),charging:!blocked&&charging,actions:blocked?[]:actions.splice(0,3)});
+  lastSend=now;online.send({type:'input',x:viewFlipped?-input.x:input.x,y:input.y,ax:viewFlipped?field.l+field.r-target.x:target.x,ay:target.y,bend,sprint:!blocked&&(keys.has('ShiftLeft')||keys.has('ShiftRight')||dashControl.sprinting),charging:!blocked&&charging,actions:blocked?[]:actions.splice(0,3)});
   if(blocked)actions.length=0;
  }
  online.frame=dt=>{
