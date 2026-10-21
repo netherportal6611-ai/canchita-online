@@ -37,10 +37,12 @@ Pruebas de salas, contraseñas erróneas, cupos, permisos, movimiento entre clie
 
 ## Funcionamiento y límites
 
-El servidor calcula a 120 pasos por segundo y envía estados a 20 Hz; el cliente interpola y anticipa el movimiento propio. Las contraseñas se guardan únicamente como hash scrypt con sal aleatoria. La contraseña y el token de reconexión no se envían a otros jugadores. El token del propio jugador se conserva en la sesión de esa pestaña para recuperar la conexión, con 20 segundos de tolerancia. El partido se pausa mientras falta un jugador y vuelve a la sala si no regresa. La salida del anfitrión transfiere su rol a otro jugador conectado.
+El servidor calcula a 120 pasos por segundo y envía estados a 30 Hz; el cliente interpola y anticipa el movimiento propio. Las contraseñas se guardan únicamente como hash scrypt con sal aleatoria. La contraseña y el token de reconexión no se envían a otros jugadores. El token del propio jugador se conserva en la sesión de esa pestaña para recuperar la conexión, con 90 segundos de tolerancia. El partido se pausa mientras falta un jugador y vuelve a la sala si no regresa. La salida del anfitrión transfiere su rol a otro jugador conectado.
 
 Las salas son temporales y viven en la memoria de una sola instancia. Un reinicio del servicio las cierra. Render gratuito puede dormir por inactividad, demorar el primer acceso y reiniciar instancias: no es una garantía de disponibilidad. No se incluye escalado entre múltiples instancias, cuentas ni persistencia de partidos.
 
 ## Créditos de recursos
 
 Fuentes Oxanium, Teko y Barlow Condensed: Google Fonts, SIL Open Font License; textos de licencia incluidos en el HTML. Audios de remate y rebote: recursos reutilizables CC0 de la versión anterior, conservados con sus créditos dentro del HTML. Biblioteca `ws`: MIT (licencia en su paquete). El código y el arte del juego conservan sus derechos; este repositorio no concede una licencia nueva sobre el juego.
+
+Las repeticiones son compartidas. Solo quien marcó puede pedir al servidor que salte la repetición para todos. Cada saque tiene un identificador para descartar posiciones anteriores y liberar los controles. El cliente integra el movimiento local por cuadro y reconcilia su historial con los estados recibidos; los paquetes de estado atrasados se descartan antes de saturar la conexión.

@@ -2027,9 +2027,10 @@ const matchFlow=(()=>{
  let ws=null,address='',mode='create',pending=null,connecting=false,manual=false,retry=0,retryTimer=0,joinedAt=0,lastSend=0;
  let frames=[],lastPacket=0,lastEvent=0,replayData=null,replaySounds=[],replaySoundIndex=0,skipReplay=false,lastPhase='',renderedSize=0;
  const actions=[];
- let predicted=null,latency=.05,lastPing=0;
+ let predicted=null,latency=.05,lastPing=0,lastSocketPacket=0,replayRequestAt=0,lastRound='',predictionHistory=[],correctionX=0,correctionY=0,inputSignature='',skipRequested=false;
+ function resetPrediction(){predicted=null;predictionHistory=[];correctionX=0;correctionY=0;}
  online.me=()=>online.room?.players.find(p=>p.id===online.id);
- online.send=data=>{if(ws?.readyState===1)ws.send(JSON.stringify(data));};
+ online.send=data=>{if(ws?.readyState===1){if(data.type==='input'&&ws.bufferedAmount>32768)return false;ws.send(JSON.stringify(data));return true;}return false;};
  const status=message=>{el('onlineStatus').textContent=message;el('onlineStatus').hidden=!message;};
  function storedAddress(){try{return localStorage.getItem('canchita.server')||'';}catch{return '';}}
  function endpoint(value){
@@ -2057,14 +2058,14 @@ const matchFlow=(()=>{
  function endReplay(){replay.active=false;replayBadge.style.display='none';document.body.classList.remove('replaying');sequenceLocked=false;fade.stage='idle';fadeCurtain.style.opacity='0';stopGameSounds();}
  function remember(){try{sessionStorage.setItem('canchita.connection',JSON.stringify({code:online.room.code,token:online.token,address}));}catch{}}
  function openSocket(request){
-  manual=false;connecting=true;const socket=new WebSocket(address);ws=socket;
-  const timeout=setTimeout(()=>{if(ws===socket&&socket.readyState!==1){socket.close();el('accessFeedback').textContent='El servidor no respondió. Probá otra vez.';}},75000);
+  manual=false;connecting=true;const socket=new WebSocket(address);ws=socket;lastSocketPacket=performance.now();
+  const timeout=setTimeout(()=>{if(ws===socket&&socket.readyState!==1){socket.close();el('accessFeedback').textContent='El servidor no respondió. Probá otra vez.';}},online.room?12000:75000);
   socket.onopen=()=>{clearTimeout(timeout);if(ws!==socket)return;socket.send(JSON.stringify(request));};
-  socket.onmessage=event=>{if(ws!==socket)return;let m;try{m=JSON.parse(event.data);}catch{return;}receive(m);};
+  socket.onmessage=event=>{if(ws!==socket)return;let m;try{m=JSON.parse(event.data);}catch{return;}lastSocketPacket=performance.now();receive(m);};
   socket.onerror=()=>{};
-  socket.onclose=()=>{
-   clearTimeout(timeout);if(ws!==socket||manual)return;connecting=false;
-   if(online.room){status('RECONECTANDO…');if(!joinedAt)joinedAt=Date.now();if(Date.now()-joinedAt<20000){retryTimer=setTimeout(()=>openSocket({type:'reconnect',version:1,code:online.room.code,token:online.token}),Math.min(4000,500*2**retry++));return;}
+  socket.onclose=event=>{
+   clearTimeout(timeout);if(ws!==socket||manual)return;if(event.code===4001){online.leave();ui.showPage('Play');status('La sesión se abrió en otra pestaña.');return;}connecting=false;online.paused=true;
+   if(online.room){status('RECONECTANDO…');if(!joinedAt)joinedAt=Date.now();if(Date.now()-joinedAt<90000){retryTimer=setTimeout(()=>openSocket({type:'reconnect',version:1,code:online.room.code,token:online.token}),Math.min(4000,500*2**retry++));return;}
     const message='Se perdió la conexión con la sala.';online.leave();ui.showPage('Play');status(message);setTimeout(()=>status(''),6000);
    }else{el('accessFeedback').textContent='No se pudo conectar. Revisá el servidor e intentá otra vez.';el('connectRoom').disabled=false;}
   };
@@ -2118,7 +2119,7 @@ const matchFlow=(()=>{
   ui.sceneChange(()=>{ui.resumeNow();camera.x=player.x;camera.y=player.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);},{game:true});
  }
  function receive(m){
-  if(m.type==='pong'){latency=clamp((performance.now()-m.at)/2000,0,.3);return;}
+  if(m.type==='pong'){latency=latency*.7+clamp((performance.now()-m.at)/2000,0,.5)*.3;return;}
   if(m.type==='hello'){if(m.version!==1){el('accessFeedback').textContent='Actualizá el juego.';online.leave();}return;}
   if(m.type==='error'){
    if(online.room&&m.message?.includes('reconexión')){online.leave();ui.showPage('Play');status(m.message);return;}
@@ -2126,30 +2127,47 @@ const matchFlow=(()=>{
    if(!online.room&&ws){manual=true;ws.close();ws=null;}return;
   }
   if(m.type==='joined'){
-   online.id=m.id;online.token=m.token;connecting=false;pending=null;retry=0;joinedAt=0;lastEvent=0;el('roomPassword').value='';el('connectRoom').disabled=false;updateRoom(m.room);remember();status('');ui.showPage('Lobby');return;
+   const recovering=Boolean(online.id||online.active);online.id=m.id;online.token=m.token;connecting=false;pending=null;retry=0;joinedAt=0;lastEvent=0;el('roomPassword').value='';el('connectRoom').disabled=false;updateRoom(m.room);remember();status('');if(!recovering||m.room.phase==='lobby')ui.showPage('Lobby');return;
   }
   if(m.type==='lobby'){updateRoom(m.room);if(online.active)status(m.room.paused?'Esperando la reconexión de un jugador…':'');return;}
   if(m.type==='started'){
-   online.active=true;matchFlow.beginOnline();frames=[];predicted=null;lastEvent=0;replayData=null;skipReplay=false;lastPhase='playing';endReplay();updateRoom(m.room);putState(m.state);document.body.classList.add('online-match');if(m.state.phase!=='finished')enterMatch();return;
+   online.active=true;online.paused=m.room.paused;matchFlow.beginOnline();frames=[];resetPrediction();lastRound='';lastEvent=0;replayData=null;skipReplay=false;lastPhase='playing';endReplay();updateRoom(m.room);putState(m.state);document.body.classList.add('online-match');if(m.state.phase!=='finished')enterMatch();return;
   }
   if(m.type==='returned'){
    online.active=false;matchFlow.clear();frames=[];replayData=null;endReplay();updateRoom(m.room);selectedClass=null;document.body.classList.remove('online-match');ui.showPage('Lobby');el('roomFeedback').textContent=m.message;status('');return;
   }
-  if(m.type==='replay'){
-   replayData={...m.replay,received:performance.now()};skipReplay=false;actions.length=0;cancelShot();replaySounds=(m.events||[]).filter(e=>['kick','bounce'].includes(e.type)&&e.t>=replayData.from);replaySoundIndex=0;replay.active=true;sequenceLocked=true;replayBadge.style.display='flex';document.body.classList.add('replaying');return;
-  }
+  if(m.type==='replay'){beginReplay(m.replay,m.events||[]);return;}
   if(m.type==='state'){
    online.paused=m.paused;
-   if(['playing','halftime','finished'].includes(m.state.phase)&&replayData){endReplay();replayData=null;predicted=null;frames=[];cancelShot();}
+   if(m.state.phase!=='replay'&&(replayData||replay.active||lastPhase==='replay')){endReplay();replayData=null;skipRequested=false;resetPrediction();frames=[];actions.length=0;clearInput();}
+   if(m.state.phase==='playing')sequenceLocked=false;
+   if(m.state.phase==='replay'&&m.state.replay?.id!==replayData?.id&&performance.now()-replayRequestAt>500){replayRequestAt=performance.now();online.send({type:'getReplay'});}
    putState(m.state);
    lastPhase=m.state.phase;
-   if(replayData&&!m.paused){replayData.elapsed=m.replayElapsed;replayData.received=performance.now();}
+   if(replayData){const elapsed=m.state.replay?.elapsed??m.replayElapsed;if(Number.isFinite(elapsed))replayData.elapsed=elapsed;replayData.received=performance.now();}
    if(!menuState.open){for(const e of m.events||[]){if(e.id<=lastEvent)continue;lastEvent=e.id;if(m.state.phase==='playing'&&['kick','bounce'].includes(e.type))sfx(e.type,e.volume,e.rate,false);}}
    else for(const e of m.events||[])lastEvent=Math.max(lastEvent,e.id);
    status(m.paused?'Esperando la reconexión de un jugador…':ws?.readyState!==1?'RECONECTANDO…':'');
   }
  }
- function putState(state){if(!state)return;lastPacket=performance.now();frames.push({...state,received:lastPacket});while(frames.length>5)frames.shift();const me=state.players.find(p=>p.id===online.id);if(me){stamina=me.stamina;clearanceCooldown=me.classId==='defender'?me.ability:0;wallCooldown=me.classId==='midfield'?me.ability:0;wallArmedTime=me.wallArmed;firstTouchCooldown=me.firstTouch;lastReceiveTime=me.receiveAt??-100;lastReceiveFast=Boolean(me.receiveFast);possession=state.ball.owner===me.id;if(!possession&&charging)cancelShot();}score=state.score;updateScore();matchFlow.receive(state);}
+ function beginReplay(data,events){
+  if(!data?.frames?.length)return;
+  if(replayData?.id===data.id){replayData.elapsed=data.elapsed;replayData.received=performance.now();return;}
+  replayData={...data,elapsed:data.elapsed||0,received:performance.now()};skipRequested=false;skipReplay=false;actions.length=0;clearInput();resetPrediction();
+  replaySounds=events.filter(e=>['kick','bounce'].includes(e.type)&&e.t>=data.from);replaySoundIndex=0;replay.active=true;sequenceLocked=true;
+  replayBadge.replaceChildren();const label=document.createElement('span');label.textContent='● REPETICIÓN';replayBadge.append(label);
+  if(data.scorerId===online.id){const hint=document.createElement('span');hint.textContent='TOCÁ PARA SALTEAR';replayBadge.append(hint);}
+  replayBadge.style.display='flex';document.body.classList.add('replaying');status('');
+ }
+ function reconcile(p,now,state){
+  if(!predicted||state.kickoff>0||state.phase!=='playing'||online.paused)return;
+  const at=now-latency*2000;let previous=predictionHistory[0],sample=previous;
+  for(const next of predictionHistory){if(next.at>=at){const f=clamp((at-(previous?.at||at))/Math.max(1,next.at-(previous?.at||at)),0,1);sample=previous?{x:previous.x+(next.x-previous.x)*f,y:previous.y+(next.y-previous.y)*f}:next;break;}previous=next;sample=next;}
+  if(!sample)return;const dx=p.x-sample.x,dy=p.y-sample.y,error=Math.hypot(dx,dy);
+  if(error>140){predicted={x:p.x,y:p.y,vx:p.vx,vy:p.vy};predictionHistory=[];correctionX=correctionY=0;return;}
+  if(error>2){correctionX=dx;correctionY=dy;}
+ }
+ function putState(state){if(!state)return;lastPacket=performance.now();const round=state.match?.id+':'+state.roundId;if(round!==lastRound){lastRound=round;frames=[];resetPrediction();actions.length=0;inputSignature='';if(state.phase==='playing'){clearInput();sequenceLocked=false;const p=state.players.find(p=>p.id===online.id);if(p){camera.x=p.x;camera.y=p.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);lastMoveX=p.dx;lastMoveY=p.dy;}}}frames.push({...state,received:lastPacket});while(frames.length>5)frames.shift();const me=state.players.find(p=>p.id===online.id);if(me){reconcile(me,lastPacket,state);stamina=me.stamina;clearanceCooldown=me.classId==='defender'?me.ability:0;wallCooldown=me.classId==='midfield'?me.ability:0;wallArmedTime=me.wallArmed;firstTouchCooldown=me.firstTouch;lastReceiveTime=me.receiveAt??-100;lastReceiveFast=Boolean(me.receiveFast);possession=state.ball.owner===me.id;if(!possession&&charging)cancelShot();}score=state.score;updateScore();matchFlow.receive(state);}
  function blend(a,b,t){const p={...b};for(const k of ['x','y','dx','dy'])if(Number.isFinite(a[k])&&Number.isFinite(b[k]))p[k]=a[k]+(b[k]-a[k])*t;return p;}
  function interpolate(a,b,f){return {...b,ball:blend(a.ball,b.ball,f),players:b.players.map(p=>blend(a.players.find(x=>x.id===p.id)||p,p,f))};}
  function stateAt(list,t,key='t'){
@@ -2157,7 +2175,7 @@ const matchFlow=(()=>{
  }
  function rendered(){
   if(replayData&&!skipReplay){const r=replayData,elapsed=r.elapsed+(online.paused?0:(performance.now()-r.received)/1000),normal=Math.max(0,r.slowStart-r.from),t=Math.min(r.to,r.from+Math.min(elapsed,normal)+Math.max(0,elapsed-normal)*.6);while(replaySoundIndex<replaySounds.length&&replaySounds[replaySoundIndex].t<=t){const e=replaySounds[replaySoundIndex++],speed=t>=r.slowStart?.6:1;if(!menuState.open)sfx(e.type,e.volume,e.rate*speed,false,speed);}return stateAt(r.frames,t);}
-  return stateAt(frames,performance.now()-70,'received');
+  return stateAt(frames,performance.now()-50,'received');
  }
  online.view=()=>{
   const state=rendered();if(!state)return snapshot();const me=state.players.find(p=>p.id===online.id)||state.players[0];
@@ -2165,38 +2183,40 @@ const matchFlow=(()=>{
   const renderBall={...state.ball};if(predicted&&state.ball.owner===online.id&&!replayData){renderBall.x+=predicted.x-me.x;renderBall.y+=predicted.y-me.y;}
   return {t:state.t,player:decorate(me),players:state.players.map(decorate),ball:renderBall,keeper:{...keeper},camera:{...camera},dive:null,possession:!replayData&&state.ball.owner===online.id,charging:!replayData&&charging,shotTarget,bend};
  };
- online.control=action=>{if(!online.active)return false;if(!menuState.open&&!online.paused&&ws?.readyState===1&&!replayData&&frames.at(-1)?.phase==='playing'){if(action)actions.push(action);sendInput(true);}return true;};
+ online.control=action=>{if(!online.active)return false;if(!menuState.open&&!online.paused&&ws?.readyState===1&&!replayData&&frames.at(-1)?.phase==='playing'){if(action&&actions.length<6)actions.push(action);sendInput(Boolean(action));}return true;};
  function sendInput(force=false){
-  const now=performance.now();if(!force&&now-lastSend<1000/30)return;lastSend=now;
+  const now=performance.now();if(ws?.readyState!==1||ws.bufferedAmount>32768)return;if(now-lastSend<(force?1000/60:1000/40))return;
   const blocked=menuState.open||online.paused||replayData||document.hidden||ws?.readyState!==1||frames.at(-1)?.phase!=='playing';
   const input=blocked?{x:0,y:0}:getInputVector();const target=charging&&shotTarget?shotTarget:touchUI?mobileFacingTarget():mouse;
-  online.send({type:'input',x:input.x,y:input.y,ax:target.x,ay:target.y,bend,sprint:!blocked&&(keys.has('ShiftLeft')||keys.has('ShiftRight')||dashControl.sprinting),charging:!blocked&&charging,actions:blocked?[]:actions.splice(0,3)});
+  lastSend=now;online.send({type:'input',x:input.x,y:input.y,ax:target.x,ay:target.y,bend,sprint:!blocked&&(keys.has('ShiftLeft')||keys.has('ShiftRight')||dashControl.sprinting),charging:!blocked&&charging,actions:blocked?[]:actions.splice(0,3)});
   if(blocked)actions.length=0;
  }
  online.frame=dt=>{
   matchFlow.frame(dt);
   const movement=getInputVector(),length=Math.hypot(movement.x,movement.y);if(length>.1){lastMoveX=movement.x/length;lastMoveY=movement.y/length;}
   if(dashControl.pointerId!==null&&!dashControl.sprinting&&performance.now()-dashControl.downAt>=155){dashControl.sprinting=true;dashButton.classList.add('sprinting');dashLabel.textContent='SPRINT';}
-  if(performance.now()-lastPing>5000||!lastPing){lastPing=performance.now();online.send({type:'ping',at:lastPing});}
+  const signature=[Math.round(movement.x*20),Math.round(movement.y*20),dashControl.sprinting,charging].join(':');if(signature!==inputSignature){sendInput(true);inputSignature=signature;}
   sendInput();predict(dt);const view=online.view();Object.assign(player,view.player);Object.assign(ball,view.ball);clock=view.t;
   if(view.ball.owner===online.id){followShotCamera=false;returnCameraToPlayer=false;}
   if(charging&&possession&&!menuState.open)charge=clamp(charge+dt/(.7*classStats().chargeTime),0,1);
   if(replayData&&!skipReplay){camera.x+=(view.ball.x-camera.x)*(1-Math.exp(-6.5*dt));camera.y+=(view.ball.y-camera.y)*(1-Math.exp(-6.5*dt));clampCameraToPitch(camera);}
   else updateCamera(dt);
  };
- // Immediate local movement; snapshots correct it against the authoritative server.
- // Other players and the free ball are interpolated from the same snapshots.
+ // Integrate the local joystick every frame; reconcile historical positions only on packets.
  function predict(dt){
   const state=frames.at(-1),p=state?.players.find(p=>p.id===online.id);if(!p||replayData)return;
-  if(!predicted||state.kickoff>0||online.paused||state.phase!=='playing'||ws?.readyState!==1){predicted={x:p.x,y:p.y,vx:p.vx,vy:p.vy};return;}
+  if(!predicted||state.kickoff>0||online.paused||state.phase!=='playing'||ws?.readyState!==1){predicted={x:p.x,y:p.y,vx:p.vx,vy:p.vy};predictionHistory=[];correctionX=correctionY=0;return;}
   const input=menuState.open||document.hidden?{x:0,y:0}:getInputVector(),n=Math.hypot(input.x,input.y),s=CLASSES[p.classId],sprint=(keys.has('ShiftLeft')||keys.has('ShiftRight')||dashControl.sprinting)&&p.stamina>0&&n>.1;
   const speed=(charging?160:245)*(p.classId==='defender'&&sprint?1:s.base)*(sprint?1.25*(p.classId==='midfield'?1.25:1):1)*(p.wallBoost>0?1.3:1),blend=1-Math.exp(-18*dt);
   if(p.dash>0){predicted.vx=p.vx;predicted.vy=p.vy;}else{predicted.vx+=(input.x*speed-predicted.vx)*blend;predicted.vy+=(input.y*speed-predicted.vy)*blend;}
-  predicted.x=clamp(predicted.x+predicted.vx*dt,field.l+p.r,field.r-p.r);predicted.y=clamp(predicted.y+predicted.vy*dt,field.t+p.r,field.b-p.r);
-  const age=Math.min(.25,latency+(performance.now()-state.received)/1000),tx=clamp(p.x+p.vx*age,field.l+p.r,field.r-p.r),ty=clamp(p.y+p.vy*age,field.t+p.r,field.b-p.r),error=Math.hypot(tx-predicted.x,ty-predicted.y),correction=error>75?1:1-Math.exp(-7*dt);
-  predicted.x+=(tx-predicted.x)*correction;predicted.y+=(ty-predicted.y)*correction;
+  const correction=1-Math.exp(-12*dt),dx=correctionX*correction,dy=correctionY*correction;correctionX-=dx;correctionY-=dy;
+  predicted.x=clamp(predicted.x+predicted.vx*dt+dx,field.l+p.r,field.r-p.r);predicted.y=clamp(predicted.y+predicted.vy*dt+dy,field.t+p.r,field.b-p.r);
+  for(const sample of predictionHistory){sample.x+=dx;sample.y+=dy;}
+  predictionHistory.push({at:performance.now(),x:predicted.x,y:predicted.y});while(predictionHistory.length>180)predictionHistory.shift();
  }
- online.skip=()=>{skipReplay=true;replay.active=false;replayBadge.style.display='none';document.body.classList.remove('replaying');stopGameSounds();status('Esperando el saque…');};
+ online.skip=()=>{if(!replayData||replayData.scorerId!==online.id||skipRequested)return;skipRequested=online.send({type:'skipReplay',id:replayData.id});};
+ // Heartbeats also run in menus, independently of rendering and touch events.
+ setInterval(()=>{if(!online.room||ws?.readyState!==1)return;const now=performance.now();if(now-lastPing>2500){lastPing=now;online.send({type:'ping',at:now});}if(!document.hidden&&now-lastSocketPacket>16000){ws.close();}},1000);
  online.returnToLobby=()=>online.send({type:'return'});
  window.addEventListener('blur',()=>{if(online.active)sendInput(true);});
  document.addEventListener('visibilitychange',()=>{if(online.active)sendInput(true);});

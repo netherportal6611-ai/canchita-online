@@ -13,7 +13,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
   fs.readFile(path.join(publicDir,'index.html'),(error,body)=>{res.writeHead(error?503:200,{'Content-Type':'text/html; charset=utf-8'});res.end(error?'El juego se está preparando.':body);});
  });
  const wss=new WebSocketServer({noServer:true,maxPayload:4096,perMessageDeflate:false});
- const send=(ws,data)=>{if(ws?.readyState===WebSocket.OPEN){if(ws.bufferedAmount>1024*1024){ws.close(1013,'Conexión lenta');return;}ws.send(JSON.stringify(data));}};
+ const send=(ws,data)=>{if(ws?.readyState===WebSocket.OPEN){if(data.type==='state'&&ws.bufferedAmount>64*1024)return;if(ws.bufferedAmount>4*1024*1024){ws.close(1013,'Conexión lenta');return;}ws.send(JSON.stringify(data));}};
  const error=(ws,message)=>send(ws,{type:'error',message});
  const captain=(room,team)=>room.players.find(p=>p.team===team&&p.connected)?.id;
  function lobby(room){return {code:room.code,size:room.size,host:room.host,phase:room.phase,paused:room.paused,kits:room.kits,players:room.players.map(p=>({id:p.id,name:p.name,number:p.number,classId:p.classId,team:p.team,ready:p.ready,connected:p.connected,rematchReady:Boolean(p.rematchReady),captain:captain(room,p.team)===p.id})),canStart:canStart(room)};}
@@ -36,23 +36,23 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
   wss.handleUpgrade(req,socket,head,ws=>{ws.ip=ip;connections.set(ip,(connections.get(ip)||0)+1);wss.emit('connection',ws,req);});
  });
  wss.on('connection',ws=>{
-  ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.window=Date.now();ws.count=0;ws.busy=false;
+  ws.lastSeen=Date.now();ws.on('pong',()=>ws.lastSeen=Date.now());ws._socket?.setNoDelay(true);ws.window=Date.now();ws.count=0;ws.busy=false;
   send(ws,{type:'hello',version:1});
   ws.on('message',async(raw,isBinary)=>{
    if(isBinary){ws.close(1003);return;}
-   const now=Date.now();if(now-ws.window>1000){ws.window=now;ws.count=0;}if(++ws.count>90){ws.close(1008,'Demasiados mensajes');return;}
+   const now=Date.now();ws.lastSeen=now;if(now-ws.window>1000){ws.window=now;ws.count=0;}if(++ws.count>240){ws.close(1008,'Demasiados mensajes');return;}
    let m;try{m=JSON.parse(raw);}catch{error(ws,'Mensaje inválido.');return;}if(!m||typeof m!=='object'||Array.isArray(m))return;
    if(m.type==='ping'){send(ws,{type:'pong',at:m.at});return;}
    if(m.type==='create'||m.type==='join'||m.type==='reconnect'){
     if(ws.player||ws.busy)return;ws.busy=true;
     try{
      if(m.version!==1)throw Error('Esta versión del juego es antigua. Recargá la página.');
-     const record=attempts.get(ws.ip)||{at:now,count:0};if(now-record.at>60000){record.at=now;record.count=0;}record.count++;attempts.set(ws.ip,record);if(record.count>12)throw Error('Demasiados intentos. Esperá un minuto.');
+     const record=attempts.get(ws.ip)||{at:now,count:0};if(now-record.at>60000){record.at=now;record.count=0;}if(m.type!=='reconnect')record.count++;attempts.set(ws.ip,record);if(m.type!=='reconnect'&&record.count>12)throw Error('Demasiados intentos. Esperá un minuto.');
      let room,p;
      if(m.type==='reconnect'){
       room=rooms.get(String(m.code||'').toUpperCase());p=room?.players.find(x=>x.token===m.token&&typeof m.token==='string');
       if(!p)throw Error('La sala ya no existe o venció la reconexión.');
-      if(p.connected)throw Error('El jugador ya está conectado.');
+      if(p.connected&&p.ws&&p.ws!==ws){const old=p.ws;old.room=null;old.player=null;old.close(4001,'Sesión recuperada');}
       p.connected=true;p.goneAt=0;p.actions=[];
      }else{
       const name=typeof m.name==='string'?m.name.trim().slice(0,18):'';
@@ -86,6 +86,8 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
    }
    const room=ws.room,p=ws.player;if(!room||!p)return;
    if(m.type==='leave'){remove(room,p);send(ws,{type:'left'});return;}
+   if(m.type==='getReplay'){if(room.phase==='replay'&&room.replay)send(ws,{type:'replay',replay:room.replay,events:room.events});return;}
+   if(m.type==='skipReplay'){if(room.phase==='replay'&&room.replay?.scorerId===p.id&&m.id===room.replay.id){physics.finishReplay(room);broadcast(room,{type:'state',state:physics.snapshot(room),paused:room.paused,events:room.events,replayElapsed:0});}return;}
    if(m.type==='return'&&room.host===p.id){returnLobby(room,'El anfitrión volvió a la sala.');return;}
    if(m.type==='resumeHalf'&&room.phase==='halftime'){p.halftimeReady=true;if(!room.paused&&room.players.every(x=>x.connected&&x.halftimeReady))physics.resumeHalf(room);broadcast(room,{type:'state',state:physics.snapshot(room),paused:room.paused,events:room.events});return;}
    if(m.type==='rematch'&&room.phase==='finished'){
@@ -126,12 +128,12 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
   const now=performance.now();accumulator+=Math.min(.15,(now-previous)/1000);previous=now;
   while(accumulator>=1/120){for(const room of rooms.values())if(room.phase!=='lobby'&&!room.paused){const phase=room.phase;physics.step(room,1/120);if(phase!=='replay'&&room.phase==='replay')broadcast(room,{type:'replay',replay:room.replay,events:room.events});}accumulator-=1/120;}
   broadcastClock+=1;
-  if(broadcastClock%3===0)for(const room of rooms.values())if(room.phase!=='lobby')broadcast(room,{type:'state',state:physics.snapshot(room),paused:room.paused,events:room.events,replayElapsed:room.replay?.elapsed||0});
+  if(broadcastClock%2===0)for(const room of rooms.values())if(room.phase!=='lobby')broadcast(room,{type:'state',state:physics.snapshot(room),paused:room.paused,events:room.events,replayElapsed:room.replay?.elapsed||0});
  },1000/60);
  const cleanup=setInterval(()=>{
-  const now=Date.now();for(const room of rooms.values()){for(const p of room.players.slice())if(!p.connected&&now-p.goneAt>20000)remove(room,p);}
+  const now=Date.now();for(const room of rooms.values()){for(const p of room.players.slice())if(!p.connected&&now-p.goneAt>90000)remove(room,p);}
   for(const [ip,record] of attempts)if(now-record.at>120000)attempts.delete(ip);
-  for(const ws of wss.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}
+  for(const ws of wss.clients){if(now-ws.lastSeen>35000){ws.terminate();continue;}if(ws.readyState===WebSocket.OPEN)ws.ping();}
  },5000);
  timer.unref();cleanup.unref();
  async function close(){clearInterval(timer);clearInterval(cleanup);for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));if(server.listening)await new Promise(r=>server.close(r));}
