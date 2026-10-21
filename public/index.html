@@ -384,6 +384,10 @@ body.touch-mode #mobileActions .skill-ready,body.touch-mode #dashButton.sprintin
 .breakButtons{display:flex;gap:16px}.breakButtons button{flex:1;padding:16px;border:2px solid #fff;border-radius:10px!important;background:#484848;color:#fff;font:700 20px Oxanium,sans-serif;cursor:pointer;transition:transform .24s ease-in-out,background-color .24s ease-in-out}.breakButtons button:hover:not(:disabled){transform:scale(1.04);background:#585858}.breakButtons button:disabled{opacity:.6;cursor:default}#matchBreakCount:empty{display:none}
 @media(orientation:landscape) and (max-height:540px){#matchBreak{padding:12px 24px}.breakCard{gap:12px;width:min(650px,100%)}#breakTitle{font-size:20px}.breakScoreboard{padding:10px;gap:16px}#matchBreak .breakScoreboard strong{font-size:42px}.breakScoreboard>span{font-size:16px}.breakScorers{min-height:30px;gap:20px;overflow:auto}#matchBreak .breakScorers strong{font-size:15px}.breakScorers span{font-size:13px}.breakButtons button{padding:10px;font-size:16px}#matchBreakCount{font-size:13px}}
 
+/* Solid black scene cut: never a translucent dimming layer. */
+#sceneBlackout{position:fixed;inset:0;z-index:10000;background:#000;opacity:1;pointer-events:auto;transition:none;animation:none;cursor:default}
+#fadeCurtain{background:#000!important;transition:none!important;z-index:9999!important}
+
 </style>
 <!-- Embedded fonts. Source: https://github.com/google/fonts
 Oxanium:
@@ -963,7 +967,7 @@ function advancePresentation(dt){
    fade.elapsed+=dt;
    const period=fade.stage==='in'?.17:.22;
    const linear=clamp(fade.elapsed/period,0,1),smooth=linear*linear*(3-2*linear);
-   fadeCurtain.style.opacity=(fade.stage==='in'?smooth:1-smooth).toFixed(3);
+   fadeCurtain.style.opacity='1';
    if(linear>=1){
      if(fade.stage==='in'){
        fade.stage='out';fade.elapsed=0;
@@ -1728,49 +1732,17 @@ function mobileFacingTarget(){
  function sceneDepth(){return !menuState.open?3:el('menuShell').hidden?2:({Home:0,Play:1,Profile:1,Settings:1,Lobby:2,RoomAccess:2,Results:4}[page]||0);}
  async function sceneChange(commit,{game=false,back=false,axis='y'}={}){
   if(menuState.transitioning)return;
-  const outgoing=currentScene();
-  const animate=mounted&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches&&typeof outgoing?.animate==='function';
-  mounted=true;
-  if(!animate){commit();menuState.open=!game;return;}
-  const oldRect=outgoing.getBoundingClientRect();
-  const oldScale=parseFloat(getComputedStyle(outgoing).zoom)||1;
-  const overlay=document.createElement('div');overlay.id='sceneOverlay';overlay.setAttribute('aria-hidden','true');
-  const snapshot=document.createElement('div');snapshot.className='sceneSnapshot';
-  snapshot.style.left=oldRect.left+'px';snapshot.style.top=oldRect.top+'px';snapshot.style.width=oldRect.width+'px';snapshot.style.height=oldRect.height+'px';
-  const copy=outgoing.cloneNode(true);copy.removeAttribute('id');copy.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
-  copy.classList.add('sceneGhostContent');copy.hidden=false;copy.inert=true;
-  copy.style.margin='0';copy.style.width=oldRect.width/oldScale+'px';copy.style.height=oldRect.height/oldScale+'px';copy.style.zoom=String(oldScale);
-  const originalCanvases=outgoing.querySelectorAll('canvas'),copiedCanvases=copy.querySelectorAll('canvas');
-  originalCanvases.forEach((original,index)=>{if(copiedCanvases[index])copiedCanvases[index].getContext('2d').drawImage(original,0,0);});
-  snapshot.append(copy);overlay.append(snapshot);document.body.append(overlay);
-  menuState.transitioning=true;menuState.open=true;clearInput();
-  document.body.classList.add('scene-changing');
-  let exitAnimation,enterAnimation;
+  if(!mounted){mounted=true;commit();menuState.open=!game;return;}
+  const curtain=document.createElement('div');curtain.id='sceneBlackout';curtain.setAttribute('aria-hidden','true');document.body.append(curtain);
+  menuState.transitioning=true;menuState.open=true;clearInput();document.body.classList.add('scene-changing');
   try{
-   commit();
-   const incoming=game?document.querySelector('.board'):currentScene();
-   menuState.open=true;
-   const nextRect=incoming.getBoundingClientRect();
-   const scale=parseFloat(getComputedStyle(incoming).zoom)||1;
-   // Start outside the viewport and keep both scenes moving at the same time.
-   const horizontal=axis==='x',viewport=horizontal?(window.innerWidth||1100):(window.innerHeight||660),edge=8;
-   const oldStart=horizontal?oldRect.left:oldRect.top,nextStart=horizontal?nextRect.left:nextRect.top;
-   const oldEnd=oldStart+(horizontal?oldRect.width:oldRect.height),nextEnd=nextStart+(horizontal?nextRect.width:nextRect.height);
-   const travel=back
-    ?Math.max(nextEnd+edge,viewport-oldStart+edge,nextEnd-oldStart+32)
-    :Math.max(viewport-nextStart+edge,oldEnd+edge,oldEnd-nextStart+32);
-   const direction=back?1:-1;
-   const duration=Math.min(1600,Math.max(1000,travel/.65));
-   const timing={duration,easing:'ease-in-out',fill:'both'};
-   const translate=horizontal?'translateX':'translateY';
-   exitAnimation=snapshot.animate([{transform:translate+'(0)'},{transform:translate+'('+direction*travel+'px)'}],timing);
-   enterAnimation=incoming.animate([{transform:translate+'('+(-direction*travel/scale)+'px)'},{transform:translate+'(0)'}],timing);
-   await Promise.all([exitAnimation.finished,enterAnimation.finished]);
+   // Paint an opaque black frame before replacing the scene underneath it.
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   commit();menuState.open=true;
+   await new Promise(resolve=>setTimeout(resolve,300));
+   await new Promise(resolve=>requestAnimationFrame(resolve));
   }finally{
-   exitAnimation?.cancel();enterAnimation?.cancel();
-   overlay.remove();
-   menuState.open=!game;menuState.transitioning=false;
-   document.body.classList.remove('scene-changing');
+   curtain.remove();menuState.open=!game;menuState.transitioning=false;document.body.classList.remove('scene-changing');
   }
  }
  function showPage(next){
