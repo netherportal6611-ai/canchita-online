@@ -10,6 +10,10 @@ Controles: WASD/flechas, mouse y clic sostenido, clic derecho para pase, Shift p
 
 Los goles incluyen la repetición con borde rojo y cámara lenta 0,60× desde medio segundo antes del remate. Solo suenan los remates y los rebotes en paredes; los rebotes suaves tienen menor volumen. Tocar durante la repetición la omite en ese dispositivo; el siguiente saque espera a que termine el tiempo compartido de repetición.
 
+Los partidos duran dos tiempos de un minuto de juego, con tres segundos de entretiempo. El reloj se detiene durante las repeticiones, los saques y las desconexiones. En el segundo tiempo los equipos cambian de lado. Al terminar aparecen el resultado, los goleadores, el detalle de goles y los MVP. El MVP suma 5 puntos por gol, 3 por asistencia, 1 por robo y 1 por atajada, y resta 2 por gol en contra; los empates comparten el premio. Todos los jugadores deben elegir REJUGAR para empezar una revancha en la misma sala. También pueden salir o volver a la sala con el anfitrión.
+
+Un dash que toca el cuerpo de un rival con posesión lo atraviesa y transfiere la pelota. El jugador que la pierde tiene un breve tiempo de espera antes de volver a recuperarla. La stamina mantiene su consumo real mientras su barra se anima de forma fluida.
+
 ## Ejecutar el servidor
 
 Necesita Node.js 22 o posterior.

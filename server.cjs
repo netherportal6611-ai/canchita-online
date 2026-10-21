@@ -16,7 +16,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
  const send=(ws,data)=>{if(ws?.readyState===WebSocket.OPEN){if(ws.bufferedAmount>1024*1024){ws.close(1013,'Conexión lenta');return;}ws.send(JSON.stringify(data));}};
  const error=(ws,message)=>send(ws,{type:'error',message});
  const captain=(room,team)=>room.players.find(p=>p.team===team&&p.connected)?.id;
- function lobby(room){return {code:room.code,size:room.size,host:room.host,phase:room.phase,paused:room.paused,kits:room.kits,players:room.players.map(p=>({id:p.id,name:p.name,number:p.number,classId:p.classId,team:p.team,ready:p.ready,connected:p.connected,captain:captain(room,p.team)===p.id})),canStart:canStart(room)};}
+ function lobby(room){return {code:room.code,size:room.size,host:room.host,phase:room.phase,paused:room.paused,kits:room.kits,players:room.players.map(p=>({id:p.id,name:p.name,number:p.number,classId:p.classId,team:p.team,ready:p.ready,connected:p.connected,rematchReady:Boolean(p.rematchReady),captain:captain(room,p.team)===p.id})),canStart:canStart(room)};}
  function canStart(room){return room.phase==='lobby'&&room.players.length===room.size*2&&[1,2].every(t=>room.players.filter(p=>p.team===t).length===room.size)&&room.players.every(p=>p.ready&&p.connected);}
  function broadcast(room,message){for(const p of room.players)send(p.ws,message);}
  const publish=room=>broadcast(room,{type:'lobby',room:lobby(room)});
@@ -25,7 +25,7 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
   if(p.ws){p.ws.room=null;p.ws.player=null;}room.players=room.players.filter(x=>x!==p);
   if(!room.players.length){rooms.delete(room.code);return;}
   if(room.host===p.id)room.host=room.players.find(x=>x.connected)?.id||room.players[0].id;
-  if(room.phase!=='lobby')returnLobby(room,'Un jugador salió. Volvieron a la sala.');else publish(room);
+  if(room.phase==='finished'){room.paused=room.players.some(p=>!p.connected);publish(room);}else if(room.phase!=='lobby')returnLobby(room,'Un jugador salió. Volvieron a la sala.');else publish(room);
  }
  server.on('upgrade',(req,socket,head)=>{
   if((req.url||'').split('?')[0]!=='/ws'){socket.destroy();return;}
@@ -87,6 +87,10 @@ function createServer({publicDir=path.join(__dirname,'public'),maxRooms=100}={})
    const room=ws.room,p=ws.player;if(!room||!p)return;
    if(m.type==='leave'){remove(room,p);send(ws,{type:'left'});return;}
    if(m.type==='return'&&room.host===p.id){returnLobby(room,'El anfitrión volvió a la sala.');return;}
+   if(m.type==='rematch'&&room.phase==='finished'){
+    p.rematchReady=m.ready===true;publish(room);
+    if(room.players.length===room.size*2&&room.players.every(x=>x.connected&&x.rematchReady)&&!room.paused){physics.start(room);broadcast(room,{type:'started',room:lobby(room),state:physics.snapshot(room)});}return;
+   }
    if(m.type==='input'){
     if(room.phase!=='playing'||room.paused)return;
     if(!['x','y','ax','ay','bend'].every(k=>Number.isFinite(m[k])))return;
