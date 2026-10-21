@@ -339,6 +339,23 @@ body.menu-open #fullscreenButton:active{transform:scale(1.04)}
  body.touch-mode #dashButton.low-stamina{color:#aaa;border-color:#888}
 }
 
+/* Rounded controls and a lighter flat fill; the joystick remains circular. */
+:root{--ui-gray:#484848;--ui-gray-active:#585858;--ui-gray-selected:#686868}
+button,.menuTile,.menuBack,.menuWide,.smallButton,.menuClass,.modeButton,.classChoice,.kitArrow,#fullscreenButton,#gameMenuButton,#mobileActions button,#dashButton{border-radius:10px!important;background-color:#484848!important}
+button:hover:not(:disabled){background-color:#585858!important}
+button:active:not(:disabled),button[aria-pressed=true]{background-color:#686868!important}
+button:disabled{background-color:#404040!important}
+button.backArrow,button.kitArrow,button.backArrow:hover,button.kitArrow:hover{background-color:transparent!important}
+#joystickBase,#joystickKnob{border-radius:50%!important}
+#joystickBase{background:#484848}#joystickKnob{background:#707070}
+body.touch-mode{--touch-action-size:clamp(64px,18dvh,92px);--touch-edge:max(12px,env(safe-area-inset-right));--touch-bottom:max(12px,env(safe-area-inset-bottom))}
+body.touch-mode #dashArea{right:var(--touch-edge);bottom:var(--touch-bottom);width:var(--touch-action-size)}
+body.touch-mode #dashArea .dashHint{width:130px;align-self:flex-end;text-align:right;white-space:nowrap;font-size:9px;line-height:12px;min-height:12px}
+body.touch-mode #dashButton,body.touch-mode #mobileActions #passButton{width:var(--touch-action-size);height:var(--touch-action-size);min-width:0;min-height:0;padding:4px;border:2px solid #fff;border-radius:10px!important;font-size:13px;font-weight:800;letter-spacing:.5px;line-height:1.2;display:flex;align-items:center;justify-content:center}
+body.touch-mode #mobileActions{right:var(--touch-edge);bottom:calc(var(--touch-bottom) + var(--touch-action-size) + 28px);flex-direction:row-reverse;gap:10px;align-items:center}
+body.touch-mode #mobileActions #abilityButton{min-width:82px;max-width:120px;min-height:48px;padding:8px 10px;font-size:12px}
+body.touch-mode #mobileActions .skill-ready,body.touch-mode #dashButton.sprinting{background-color:#686868!important}
+
 </style>
 <!-- Embedded fonts. Source: https://github.com/google/fonts
 Oxanium:
@@ -640,10 +657,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   <div id="modeHelp" aria-hidden="true"></div>
   <div id="joystickZone" aria-label="Control analógico de movimiento de 360 grados"><div id="joystickBase"><div id="joystickKnob"></div></div></div>
   <div id="dashArea"><button id="dashButton" type="button" aria-label="Toque para dash, mantener para sprint"><span id="dashLabel">DASH</span></button><span class="dashHint">MANTENÉ: SPRINT</span></div>
-  <div id="mobileTools"><button id="mobileFree" type="button">FALTAS</button><button id="mobileReset" type="button" aria-label="Reiniciar partido">↻</button></div>
   <div id="mobileStatus">TOCÁ PARA APUNTAR Y PATEAR</div>
   <div id="mobileActions"><button type="button" id="passButton" aria-label="Pase instantáneo">PASE</button><button type="button" id="abilityButton" aria-label="Habilidad especial">PARED</button></div>
-  <button id="skipShot" type="button" aria-label="Saltar al siguiente tiro libre">SALTAR <span aria-hidden="true">››</span></button>
   <div id="replayBadge" aria-live="off"><span>● REPETICIÓN</span></div>
   
   <div id="fadeCurtain" aria-hidden="true"></div>
@@ -790,8 +805,6 @@ const joystickBase=document.getElementById('joystickBase');
 const joystickKnob=document.getElementById('joystickKnob');
 const dashButton=document.getElementById('dashButton');
 const dashLabel=document.getElementById('dashLabel');
-const mobileFreeButton=document.getElementById('mobileFree');
-const mobileResetButton=document.getElementById('mobileReset');
 const fullscreenButton=document.getElementById('fullscreenButton');
 fullscreenButton.addEventListener('click',async()=>{
   try{
@@ -803,7 +816,6 @@ fullscreenButton.addEventListener('click',async()=>{
   }catch(_){/* Fullscreen may be unavailable inside an embedded browser. */}
 });
 const mobileStatus=document.getElementById('mobileStatus');
-const skipShotButton=document.getElementById('skipShot');
 const replayBadge=document.getElementById('replayBadge');
 const fadeCurtain=document.getElementById('fadeCurtain');
 const replayEdge=document.getElementById('replayEdge');
@@ -822,7 +834,7 @@ if(touchUI)document.body.classList.add('touch-mode');
 
 let possession=false,charge=0,charging=false,cooldown=0,freeze=0,score=[0,0],last=0,accumulator=0,trail=[],clock=0,keeperHistory=[];
 let shotTarget=null,chargeMouseY=0,bend=0,flightCurve=null;
-let freeMode=false,freePhase='placing',freeTimer=0,freeSpot={x:startPlayer.x,y:centerY},dive=null;
+let dive=null;
 // Rolling 7-second world-state recording (not a low-quality canvas capture).
 const REPLAY_SECONDS=7, HISTORY_FPS=30;
 const history=[];
@@ -832,7 +844,7 @@ const replay={active:false,frames:[],time:0,end:0,slowStart:Infinity,hold:0,curs
 const fade={stage:'idle',elapsed:0,atBlack:null,unlock:false};
 function snapshot(){
  return {t:clock,player:{...player},ball:{...ball},keeper:{...keeper},camera:{...camera},
-         dive:dive?{...dive}:null,possession,charging,freeMode,bend,shotTarget:shotTarget?{...shotTarget}:null};
+         dive:dive?{...dive}:null,possession,charging,bend,shotTarget:shotTarget?{...shotTarget}:null};
 }
 function captureHistory(force=false){
  if(!force && clock-lastHistoryCapture<1/HISTORY_FPS)return;
@@ -843,12 +855,10 @@ function captureHistory(force=false){
  while(history.length>2 && history[1].t<clock-REPLAY_SECONDS)history.shift();
 }
 function clearHistory(){history.length=0;lastHistoryCapture=-Infinity;soundHistory.length=0;}
-function hideSkip(){skipShotButton.classList.remove('visible');skipShotButton.classList.add('leaving')}
-function showSkip(){skipShotButton.classList.remove('leaving');skipShotButton.classList.add('visible')}
 // Runs an opaque-black midpoint callback and fades out again, on a frame clock.
 function fadeThroughBlack(atBlack,unlock=false){
  if(fade.stage!=='idle')return false;
- sequenceLocked=true;hideSkip();releaseJoystick();releaseDash();cancelShot();
+ sequenceLocked=true;releaseJoystick();releaseDash();cancelShot();
  fade.stage='in';fade.elapsed=0;fade.atBlack=atBlack;fade.unlock=unlock;
  return true;
 }
@@ -864,7 +874,7 @@ function startGoalReplay(){
  prepareReplaySounds();playReplaySounds(replay.time>=replay.slowStart ? 0.60 : 1);
  // Start directly on the ball, then let the replay camera trail its movement.
  const opening=replay.frames[0];
- const openingZoom=opening.freeMode?REPLAY_ZOOM:CAM_ZOOM;
+ const openingZoom=CAM_ZOOM;
  replay.viewCamera={x:opening.ball.x,y:opening.ball.y,zoom:openingZoom};
  clampCameraToPitch(replay.viewCamera);
  replayBadge.style.display='flex';document.body.classList.add('replaying');
@@ -875,7 +885,7 @@ function endGoalReplay(){
  stopGameSounds();
  fadeThroughBlack(()=>{
    replay.active=false;replay.frames=[];replay.viewCamera=null;replayBadge.style.display='none';document.body.classList.remove('replaying');
-   if(freeMode){freePhase='ready';setupFree();}else reset();
+   reset();
    updateMobileMode();
  },true);
 }
@@ -903,7 +913,7 @@ function updateReplayCamera(dt){
  if(!replay.viewCamera)return;
  const viewed=replayFrame();
  const cam=replay.viewCamera;
- const wantedZoom=viewed.freeMode?REPLAY_ZOOM:CAM_ZOOM;
+ const wantedZoom=CAM_ZOOM;
  cam.zoom+=(wantedZoom-cam.zoom)*(1-Math.exp(-4.5*dt));
  // Deliberate small lag (~150 ms) to make fast curved shots look natural.
  const follow=1-Math.exp(-6.5*dt);
@@ -937,24 +947,11 @@ function advancePresentation(dt){
    if(replay.time>=replay.end){replay.hold+=dt;if(replay.hold>.45)endGoalReplay()}
  }
 }
-function nextFreeShot(){
- if(!freeMode)return;
- if(!fadeThroughBlack(()=>{freePhase='ready';setupFree();updateMobileMode();},true))return;
-}
-skipShotButton.addEventListener('click',()=>{
- if(freeMode&&freePhase==='flight'&&!sequenceLocked&&!replay.active)nextFreeShot();
-});
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function reset(full=false){clearanceCooldown=0;firstTouchCooldown=0;wallCooldown=0;wallArmedTime=0;wallBoostTime=0;lastReceiveTime=-100;lastReceiveFast=false;followShotCamera=false;returnCameraToPlayer=false;hideSkip();clearHistory();cancelShot();releaseJoystick();releaseDash();dashTimer=0;goalkeeperStretchActive=false;staminaRegenDelay=0;stamina=1;sprintExhausted=false;shotTarget=null;bend=0;flightCurve=null;Object.assign(player,{x:startPlayer.x,y:startPlayer.y,vx:0,vy:0,dx:1,dy:0});Object.assign(ball,{x:startBall.x,y:startBall.y,vx:0,vy:0,spin:0,lastKickTime:0});freeze=0;document.getElementById('message').style.display='none';Object.assign(keeper,{x:field.r-38,y:centerY,vx:0,vy:0,diveCooldown:0});keeperHistory=[];dive=null;possession=false;charge=0;charging=false;cooldown=0;trail=[];camera.x=player.x+150;camera.y=player.y;camera.zoom=CAM_ZOOM;if(full){score=[0,0];freeze=0;keys.clear()}updateScore()}
+function reset(full=false){clearanceCooldown=0;firstTouchCooldown=0;wallCooldown=0;wallArmedTime=0;wallBoostTime=0;lastReceiveTime=-100;lastReceiveFast=false;followShotCamera=false;returnCameraToPlayer=false;clearHistory();cancelShot();releaseJoystick();releaseDash();dashTimer=0;goalkeeperStretchActive=false;staminaRegenDelay=0;stamina=1;sprintExhausted=false;shotTarget=null;bend=0;flightCurve=null;Object.assign(player,{x:startPlayer.x,y:startPlayer.y,vx:0,vy:0,dx:1,dy:0});Object.assign(ball,{x:startBall.x,y:startBall.y,vx:0,vy:0,spin:0,lastKickTime:0});freeze=0;document.getElementById('message').style.display='none';Object.assign(keeper,{x:field.r-38,y:centerY,vx:0,vy:0,diveCooldown:0});keeperHistory=[];dive=null;possession=false;charge=0;charging=false;cooldown=0;trail=[];camera.x=player.x+150;camera.y=player.y;camera.zoom=CAM_ZOOM;if(full){score=[0,0];freeze=0;keys.clear()}updateScore()}
 function updateScore(){document.getElementById('left').textContent=score[0];document.getElementById('right').textContent=score[1]}
 function shotSpin(){const offset=(player.y-centerY)/((field.b-field.t)/2);const edge=Math.max(0,(Math.abs(offset)-.58)/.42);return -Math.sign(offset)*edge*.34*Math.sign(player.dx||1)}
-function toggleFree(){if(online.active)return;if(sequenceLocked||replay.active)return;hideSkip();freeMode=!freeMode;freePhase='placing';freeTimer=0;reset();keys.clear();if(freeMode){camera.x=centerX;camera.y=centerY;camera.zoom=.77}updateMobileMode();}
-function updateMobileMode(){
- mobileFreeButton.classList.toggle('selected',freeMode);
- mobileFreeButton.textContent=freeMode?'SALIR FALTAS':'FALTAS';
- mobileStatus.textContent=freeMode?(freePhase==='placing'?'TOCÁ LA CANCHA PARA UBICAR LA PELOTA':freePhase==='flight'?'SALTAR O ESPERAR EL SIGUIENTE TIRO':'MANTENÉ PARA PATEAR'):'TOCÁ PARA APUNTAR Y PATEAR';
-}
-function setupFree(){reset();if(freeMode){camera.x=centerX;camera.y=centerY;camera.zoom=.77}player.x=freeSpot.x;player.y=freeSpot.y;aim(1);possession=true;ball.x=player.x+player.dx*29;ball.y=clamp(player.y+player.dy*29,field.t+ball.r,field.b-ball.r);}
+function updateMobileMode(){mobileStatus.textContent='TOCÁ PARA APUNTAR Y PATEAR';}
 // Facing is mouse aiming on PC, and actual movement direction on mobile.
 function facingDirection(){
  if(touchUI){const input=getInputVector();const len=Math.hypot(input.x,input.y);if(len>.12)return {x:input.x/len,y:input.y/len};return {x:lastMoveX,y:lastMoveY};}
@@ -971,7 +968,7 @@ function endPossessionShot(speed,dir){
  followShotCamera=true;returnCameraToPlayer=false;
  ball.lastPasserId=player.id;ball.lastPasserTeam=player.team;ball.lastPasserClass=selectedClass;
  possession=false;cancelShot();cooldown=.38;
- if(freeMode){freePhase='flight';freeTimer=3.2;showSkip();updateMobileMode();}
+ 
 }
 function shoot(){
  if(online.active){online.control("shoot");charging=false;charge=0;return;}
@@ -987,7 +984,7 @@ function shoot(){
   }
   ball.lastPasserId=player.id;ball.lastPasserTeam=player.team;ball.lastPasserClass=selectedClass;
   possession=false;cooldown=.38;
-  if(freeMode){freePhase='flight';freeTimer=3.2;showSkip();updateMobileMode();}
+  
  }
  charging=false;charge=0;
 }
@@ -1017,7 +1014,7 @@ function shootFirstTouch(){
  ball.vx=vx/length*speed;ball.vy=vy/length*speed;ball.spin=0;
  possession=false;cancelShot();cooldown=.38;firstTouchCooldown=3;
  followShotCamera=true;returnCameraToPlayer=false;
- if(freeMode){freePhase='flight';freeTimer=3.2;showSkip();updateMobileMode();}
+ 
 }
 function findDirectionalTeammate(dir){
  let best=null,bestScore=-Infinity;
@@ -1037,7 +1034,7 @@ function findDirectionalTeammate(dir){
 function instantPass(){
  if(online.active)return online.control("pass");
  if(!selectedClass||sequenceLocked||replay.active||freeze>0)return false;
- if(freeMode&&freePhase!=='ready')return false;
+ 
  if(firstTouchOpportunity()){shootFirstTouch();return true;}
  if(!possession)return false;
  const dir=facingDirection();
@@ -1053,7 +1050,7 @@ function instantPass(){
 function useAbility(){
  if(online.active)return online.control("ability");
  if(!selectedClass||sequenceLocked||replay.active||freeze>0)return false;
- if(freeMode&&freePhase!=='ready')return false;
+ 
  if(selectedClass==='defender'){
   if(clearanceCooldown>0||!possession)return false;
   const dir=facingDirection();const mate=findDirectionalTeammate(dir);
@@ -1084,7 +1081,6 @@ window.addEventListener('keydown',e=>{
   if(menuState.open)return;
   if(menuState.open||!selectedClass)return;
   if(sequenceLocked||replay.active){if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();return;}
-  if(e.code==='KeyP'&&!e.repeat){e.preventDefault();toggleFree();return;}
   if(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight','Space','ShiftLeft','ShiftRight','KeyE'].includes(e.code))e.preventDefault();
   if(e.code==='Space'&&!e.repeat)tryDash();
   if(e.code==='KeyE'&&!e.repeat){e.preventDefault();useAbility();return;}
@@ -1132,11 +1128,6 @@ canvas.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse'&&e.button!==0)return;
   e.preventDefault();
   updateMouse(e);
-  if(freeMode&&freePhase==='placing'){
-    freeSpot={x:clamp(mouse.x,field.l+player.r,field.r-player.r-55),y:clamp(mouse.y,field.t+player.r,field.b-player.r)};
-    freePhase='ready';setupFree();updateMobileMode();return;
-  }
-  if(freeMode&&freePhase!=='ready')return;
   startShot(e);
 });
 canvas.addEventListener('pointerup',e=>{
@@ -1183,14 +1174,13 @@ function keepPlayerVisible(cam){
 // Gameplay camera: pursue an airborne ball, but switch smoothly back to the
 // player before the next ball-follow position would push them out of view.
 function updateCamera(dt){
- const readyFreeKick=freeMode&&(freePhase==='placing'||freePhase==='ready');
- const targetZoom=readyFreeKick?.77:(freeMode&&freePhase==='flight'?1.06:CAM_ZOOM);
+ const targetZoom=CAM_ZOOM;
  camera.zoom+=(targetZoom-camera.zoom)*(1-Math.exp(-4.5*dt));
  const limits=cameraPitchBounds(camera.zoom);
- const playerLookX=freeMode?player.x:player.x+Math.min(175,125+Math.abs(player.vx)*.13);
- let lookX=freeMode&&readyFreeKick?centerX:playerLookX;
- let lookY=freeMode&&readyFreeKick?centerY:player.y;
- const chasingBall=followShotCamera&&!possession&&!readyFreeKick;
+ const playerLookX=player.x+Math.min(175,125+Math.abs(player.vx)*.13);
+ let lookX=playerLookX;
+ let lookY=player.y;
+ const chasingBall=followShotCamera&&!possession;
  if(possession){followShotCamera=false;returnCameraToPlayer=false;}
  if(chasingBall&&!returnCameraToPlayer){
    const wantedX=clamp(ball.x,limits.minX,limits.maxX);
@@ -1292,8 +1282,6 @@ dashButton.addEventListener('pointerup',e=>{
 for(const name of ['pointercancel','lostpointercapture']){
  dashButton.addEventListener(name,e=>{if(e.pointerId===dashControl.pointerId)releaseDash()});
 }
-mobileFreeButton.addEventListener('click',toggleFree);
-mobileResetButton.addEventListener('click',()=>{if(!online.active&&!sequenceLocked&&!replay.active)reset(true)});
 function getInputVector(){
  let x=Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft'));
  let y=Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('ArrowUp'));
@@ -1309,7 +1297,7 @@ function isInsidePenaltyArea(x,y){
 }
 function tryDash(){
  if(online.active)return online.control("dash");
- if(!selectedClass||sequenceLocked||replay.active||freeMode||freeze>0||dashTimer>0||stamina<(1/3)*classStats().staminaDrain)return false;
+ if(!selectedClass||sequenceLocked||replay.active||freeze>0||dashTimer>0||stamina<(1/3)*classStats().staminaDrain)return false;
  const input=getInputVector(), len=Math.hypot(input.x,input.y);
  // ESTIRAR solo se activa si el arquero inicia el dash dentro de un área.
  goalkeeperStretchActive=selectedClass==='goalkeeper' && isInsidePenaltyArea(player.x,player.y);
@@ -1335,7 +1323,6 @@ function goalScored(side){
  // Save the exact scoring frame before freezing/mutating game state.
  captureHistory(true);
  score[side]++;updateScore();
- if(freeMode)freePhase='result';
  document.getElementById('message').style.display='none';
  fadeThroughBlack(startGoalReplay,false);
 }
@@ -1412,20 +1399,16 @@ firstTouchCooldown=Math.max(0,firstTouchCooldown-dt);
 wallCooldown=Math.max(0,wallCooldown-dt);
 wallArmedTime=Math.max(0,wallArmedTime-dt);
 wallBoostTime=Math.max(0,wallBoostTime-dt);
-if(freeMode&&freePhase==='placing'){player.x=clamp(mouse.x,field.l+player.r,field.r-player.r-55);player.y=clamp(mouse.y,field.t+player.r,field.b-player.r);player.vx=0;player.vy=0;aim(dt);possession=false;return}
-if(freeMode&&freePhase==='flight'){freeTimer-=dt;if(freeTimer<=0){nextFreeShot();return}}
-if(freeMode&&freePhase==='result')return;
-if(freeze>0){freeze-=dt;if(freeze<=0){if(freeMode){freeze=0;document.getElementById('message').style.display='none'}else reset()}return}
+if(freeze>0){freeze-=dt;if(freeze<=0)reset();return}
 cooldown=Math.max(0,cooldown-dt);
 let {x,y}=getInputVector();
-if(freeMode){x=0;y=0;player.vx=0;player.vy=0;dashTimer=0}
 const movement=Math.hypot(x,y);
 if(movement>.1){lastMoveX=x/movement;lastMoveY=y/movement;}
 // 4 seconds of continuous sprint; dash consumes 1/3. A brief cooldown prevents instant regeneration.
 if(dashControl.pointerId!==null&&!dashControl.sprinting&&performance.now()-dashControl.downAt>=155){
  dashControl.sprinting=true;dashButton.classList.add('sprinting');dashLabel.textContent='SPRINT';
 }
-const sprintRequested=!freeMode&&(keys.has('ShiftLeft')||keys.has('ShiftRight')||dashControl.sprinting);
+const sprintRequested=(keys.has('ShiftLeft')||keys.has('ShiftRight')||dashControl.sprinting);
 if(sprintExhausted&&stamina>=.28)sprintExhausted=false;
 const sprinting=sprintRequested&&!sprintExhausted&&stamina>0&&movement>.1&&dashTimer<=0;
 if(sprinting){stamina=Math.max(0,stamina-dt/4*classStats().staminaDrain);staminaRegenDelay=.55;if(stamina===0)sprintExhausted=true}
@@ -1462,7 +1445,7 @@ if(ball.y<field.t+ball.r){if(Math.abs(ball.vy)>150)bounceSfx(Math.abs(ball.vy),.
 for(const post of [{x:field.l,y:goal.top},{x:field.l,y:goal.bottom},{x:field.r,y:goal.top},{x:field.r,y:goal.bottom}]){const px=ball.x-post.x,py=ball.y-post.y,d=Math.hypot(px,py),min=ball.r+5;if(d<min){const nx=d?px/d:1,ny=d?py/d:0;ball.x=post.x+nx*min;ball.y=post.y+ny*min;const dot=ball.vx*nx+ball.vy*ny;if(dot<0){flightCurve=null;ball.spin*=.5;ball.vx-=1.8*dot*nx;ball.vy-=1.8*dot*ny}}}
 const opening=ball.y>goal.top+ball.r&&ball.y<goal.bottom-ball.r;if(!opening){if(ball.x<field.l+ball.r){if(Math.abs(ball.vx)>180)bounceSfx(Math.abs(ball.vx),1);flightCurve=null;ball.x=field.l+ball.r;ball.vx=Math.abs(ball.vx)*.8}if(ball.x>field.r-ball.r){if(Math.abs(ball.vx)>180)bounceSfx(Math.abs(ball.vx),1);flightCurve=null;ball.x=field.r-ball.r;ball.vx=-Math.abs(ball.vx)*.8}}else if(ball.x>field.r+ball.r){goalScored(0);return}else if(ball.x<field.l-ball.r){goalScored(1);return}
 const receiverBonus=ball.lastPasserClass==='midfield'&&ball.lastPasserTeam===player.team&&ball.lastPasserId!==player.id?1.25:1;
-if(!(freeMode&&freePhase==='flight')&&cooldown===0&&Math.hypot(ball.x-player.x,ball.y-player.y)<(player.r+ball.r+12)*receiverBonus){
+if(cooldown===0&&Math.hypot(ball.x-player.x,ball.y-player.y)<(player.r+ball.r+12)*receiverBonus){
  lastReceiveTime=clock;lastReceiveFast=Math.hypot(ball.vx,ball.vy)>120;
  possession=true;flightCurve=null;ball.vx=0;ball.vy=0;
 }}
@@ -1494,7 +1477,7 @@ powerFill.style.background=charge>.8?'#ffbd69':'#fff';
 powerText.textContent=Math.round(charge*100)+'%';
 staminaFill.style.width=(stamina*100)+'%';
 staminaText.textContent=Math.round(stamina*100)+'%';
-staminaFill.style.background=stamina<1/3?'#ffae80':'#68c5ff';document.getElementById('modeHelp').textContent=freeMode?(freePhase==='placing'?'FALTAS · Mové el mouse · click izquierdo para fijar posición · P salir':freePhase==='ready'?'FALTAS · Apuntá y mantené click izquierdo para patear · P salir':'FALTAS · Próximo tiro en unos segundos · P salir'):'WASD / flechas · Mouse para apuntar · Mantené click para patear · Shift sprint · Espacio dash · P faltas';
+staminaFill.style.background=stamina<1/3?'#ffae80':'#68c5ff';document.getElementById('modeHelp').textContent='WASD / flechas · Mouse para apuntar · Mantené click para patear · Shift sprint · Espacio dash · E habilidad';
 updateAbilityButton();updateMobileClassControls();
 renderScene(online.active?online.view():replay.active?replayFrame():snapshot());
 }
@@ -1581,7 +1564,7 @@ function paintKitPreview(canvas,kitId,number=10,size=44){
 
 function renderScene(view){
 ctx.setTransform(canvas.width/viewWidth,0,0,canvas.height/viewHeight,0,0);
-const {player,ball,keeper,camera,dive,possession,charging,freeMode,shotTarget,bend}=view;
+const {player,ball,keeper,camera,dive,possession,charging,shotTarget,bend}=view;
 ctx.clearRect(0,0,viewWidth,viewHeight);ctx.fillStyle='#62666c';ctx.fillRect(0,0,viewWidth,viewHeight);ctx.save();ctx.translate(viewWidth/2,viewHeight/2);ctx.scale(camera.zoom,camera.zoom);ctx.translate(-camera.x,-camera.y);
 const fieldLineColor='#fff';ctx.lineWidth=2;ctx.strokeStyle=fieldLineColor;ctx.beginPath();ctx.moveTo(field.l,goal.top);ctx.lineTo(field.l,field.t);ctx.lineTo(field.r,field.t);ctx.lineTo(field.r,goal.top);ctx.moveTo(field.r,goal.bottom);ctx.lineTo(field.r,field.b);ctx.lineTo(field.l,field.b);ctx.lineTo(field.l,goal.bottom);ctx.stroke();
 // Goals extend visibly beyond the playing field.
@@ -1595,7 +1578,7 @@ ctx.beginPath();ctx.moveTo(centerX,field.t);ctx.lineTo(centerX,field.b);ctx.stro
 // Goals are visible physical extensions of the pitch, not openings in thin air.
 ctx.save();ctx.fillStyle='#ffffff10';ctx.fillRect(field.l-goal.depth,goal.top,goal.depth,goal.bottom-goal.top);ctx.fillRect(field.r,goal.top,goal.depth,goal.bottom-goal.top);ctx.strokeRect(field.l-goal.depth,goal.top,goal.depth,goal.bottom-goal.top);ctx.strokeRect(field.r,goal.top,goal.depth,goal.bottom-goal.top);ctx.restore();
 for(const edge of [field.l,field.r]){const left=edge===field.l;ctx.strokeRect(left?edge:edge-145,centerY-142,145,284);ctx.strokeRect(left?edge:edge-55,centerY-78,55,156);circle(left?edge+105:edge-105,centerY,3,fieldLineColor)}
-if(!replay.active&&possession&&!(freeMode&&freePhase==='placing')){
+if(!replay.active&&possession){
 // A locked endpoint with a quadratic control point, like a curve editor.
 ctx.save();ctx.lineWidth=2;const start={x:ball.x,y:ball.y};let end;
 if(charging&&shotTarget)end=shotTarget;else end={x:start.x+player.dx*270,y:start.y+player.dy*270};
@@ -1609,7 +1592,6 @@ if(charging&&shotTarget){
  ctx.moveTo(tx,ty-13);ctx.lineTo(tx,ty-5);ctx.moveTo(tx,ty+5);ctx.lineTo(tx,ty+13);ctx.stroke();
 }
 ctx.restore();}
-if(freeMode&&!replay.active){ctx.save();ctx.lineWidth=2;circle(player.x,player.y,player.r+8,null,'#fff');ctx.restore()}
 if(!view.players){
 if(dive){
  ctx.save();ctx.translate(keeper.x,keeper.y);ctx.rotate(Math.atan2(dive.uy,dive.ux));
@@ -1987,7 +1969,7 @@ function mobileFacingTarget(){
  }
  function enterMatch(){
   if(!online.active)return;if(menuState.transitioning){setTimeout(enterMatch,40);return;}
-  const me=online.me();selectedClass=me.classId;freeMode=false;clearInput();lastMoveX=me.team===1?1:-1;lastMoveY=0;
+  const me=online.me();selectedClass=me.classId;clearInput();lastMoveX=me.team===1?1:-1;lastMoveY=0;
   document.body.classList.add('class-chosen');document.body.classList.toggle('has-ability',selectedClass==='defender'||selectedClass==='midfield');abilityButton.textContent=selectedClass==='defender'?'DESPEJAR':'PARED';updateMobileMode();
   ui.sceneChange(()=>{ui.resumeNow();camera.x=player.x;camera.y=player.y;camera.zoom=CAM_ZOOM;clampCameraToPitch(camera);},{game:true});
  }
@@ -2036,7 +2018,7 @@ function mobileFacingTarget(){
   const state=rendered();if(!state)return snapshot();const me=state.players.find(p=>p.id===online.id)||state.players[0];
   const decorate=p=>({...p,...(p.id===online.id&&predicted&&!replayData?predicted:{}),kitId:online.room.kits[p.team]});
   const renderBall={...state.ball};if(predicted&&state.ball.owner===online.id&&!replayData){renderBall.x+=predicted.x-me.x;renderBall.y+=predicted.y-me.y;}
-  return {t:state.t,player:decorate(me),players:state.players.map(decorate),ball:renderBall,keeper:{...keeper},camera:{...camera},dive:null,possession:!replayData&&state.ball.owner===online.id,charging:!replayData&&charging,freeMode:false,shotTarget,bend};
+  return {t:state.t,player:decorate(me),players:state.players.map(decorate),ball:renderBall,keeper:{...keeper},camera:{...camera},dive:null,possession:!replayData&&state.ball.owner===online.id,charging:!replayData&&charging,shotTarget,bend};
  };
  online.control=action=>{if(!online.active)return false;if(!menuState.open&&!online.paused&&ws?.readyState===1&&!replayData){if(action)actions.push(action);sendInput(true);}return true;};
  function sendInput(force=false){
@@ -2070,9 +2052,6 @@ function mobileFacingTarget(){
  }
  online.skip=()=>{skipReplay=true;replay.active=false;replayBadge.style.display='none';document.body.classList.remove('replaying');stopGameSounds();status('Esperando el saque…');};
  online.returnToLobby=()=>online.send({type:'return'});
- // P and the practice-only reset tools cannot reset a shared match.
- window.addEventListener('keydown',e=>{if(online.active&&['KeyP','KeyR'].includes(e.code)){e.preventDefault();e.stopImmediatePropagation();}},true);
- for(const id of ['mobileFree','mobileReset'])el(id).addEventListener('pointerdown',e=>{if(online.active){e.preventDefault();e.stopImmediatePropagation();}},true);
  window.addEventListener('blur',()=>{if(online.active)sendInput(true);});
  document.addEventListener('visibilitychange',()=>{if(online.active)sendInput(true);});
  // A reload on the same tab can reclaim the seat without storing the password.

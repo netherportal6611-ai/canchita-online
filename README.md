@@ -6,7 +6,7 @@ Juego de fútbol con clases, con salas privadas por código de cuatro caracteres
 
 Abrí la dirección del servidor desde PC o celular. En JUGAR → CREAR SALA elegí una contraseña. Compartí el código y la contraseña con tus amigos; ellos entran en UNIRSE A SALA. En la sala, el anfitrión elige 1v1, 2v2 o 3v3; cada jugador elige equipo y clase. El primer jugador conectado de cada equipo elige el conjunto. Todos deben marcar LISTO para que el anfitrión inicie.
 
-Se conservan los controles: WASD/flechas, mouse y clic sostenido, clic derecho para pase, Shift para sprint, Espacio para dash y E para habilidad; en móvil, joystick y botones existentes. Los tiros libres y el reinicio individual se mantienen en JUEGO ACTUAL, la práctica sin conexión. En una partida online se vuelve a la sala desde MENÚ → VOLVER A LA SALA (anfitrión).
+Controles: WASD/flechas, mouse y clic sostenido, clic derecho para pase, Shift para sprint, Espacio para dash y E para habilidad. En móvil, joystick circular y botones de Pase y Dash del mismo tamaño, alineados a la derecha, con la habilidad de clase a la izquierda de Pase. Tocar Dash activa el desplazamiento; mantenerlo activa sprint. JUEGO ACTUAL permite practicar sin conexión. En una partida online se vuelve a la sala desde MENÚ → VOLVER A LA SALA (anfitrión).
 
 Los goles incluyen la repetición con borde rojo y cámara lenta 0,60× desde medio segundo antes del remate. Solo suenan los remates y los rebotes en paredes; los rebotes suaves tienen menor volumen. Tocar durante la repetición la omite en ese dispositivo; el siguiente saque espera a que termine el tiempo compartido de repetición.
 
